@@ -28,30 +28,39 @@ h1 {
     height: 50px;
     object-fit: contain;
 }
-
+button:hover {
+    background-color: #9a67ea;
+}
+#news-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
 .news-item {
+    background-color: #1e1e1e;
     margin-bottom: 20px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
-
 .news-item h2 {
-    margin: 0 0 10px;
+    margin-top: 0;
 }
-
-.news-item p {
-    margin: 0 0 10px;
-}
-
 .news-item img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 10px 0;
+    width: 100px;
+    height: 100px;
+    border-radius: 10px;
+    object-fit: cover;
 }
-
+.news-item a {
+    color: #bb86fc;
+    text-decoration: none;
+}
+.news-item a:hover {
+    text-decoration: underline;
+}
 .fetch-timestamp {
     font-size: 0.8em;
-    color: #666;
+    color: #aaaaaa;
+    margin-top: 10px;
 }
