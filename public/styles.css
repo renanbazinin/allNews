@@ -10,51 +10,48 @@ h1 {
     padding: 20px;
 }
 #buttons-container {
-    text-align: center;
-    margin: 20px;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
 }
-button {
-    background-color: #bb86fc;
+
+#buttons-container button {
+    background: none;
     border: none;
-    color: white;
-    padding: 10px 20px;
-    margin: 5px;
     cursor: pointer;
+    margin: 5px;
+}
+
+#buttons-container img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.news-item {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
     border-radius: 5px;
 }
-button:hover {
-    background-color: #9a67ea;
-}
-#news-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
-.news-item {
-    background-color: #1e1e1e;
-    margin-bottom: 20px;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
+
 .news-item h2 {
-    margin-top: 0;
+    margin: 0 0 10px;
 }
+
+.news-item p {
+    margin: 0 0 10px;
+}
+
 .news-item img {
-    width: 100px;
-    height: 100px;
-    border-radius: 10px;
-    object-fit: cover;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 10px 0;
 }
-.news-item a {
-    color: #bb86fc;
-    text-decoration: none;
-}
-.news-item a:hover {
-    text-decoration: underline;
-}
+
 .fetch-timestamp {
     font-size: 0.8em;
-    color: #aaaaaa;
-    margin-top: 10px;
+    color: #666;
 }
