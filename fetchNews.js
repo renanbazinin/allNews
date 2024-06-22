@@ -150,8 +150,8 @@ async function fetchN12NewsRSS() {
 
         // Save elements of each item
         const newsItems = latestItems.map(item => {
-            const imageMatch = item.description.match(/src='([^']+)'/);
-            const imageUrl = imageMatch ? imageMatch[1] : item.image;
+            //const imageMatch = item.description.match(/src='([^']+)'/);
+            const imageUrl = item.image624X383;//imageMatch ? imageMatch[1] : item.image624X383;
 
             return {
                 title: item.title,
