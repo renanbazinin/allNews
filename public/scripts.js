@@ -13,11 +13,14 @@ let fetchIntervalId = null;
 
 async function fetchNews(endpoint, newsType) {
     try {
+        document.getElementById('loading-gif').style.display = 'block';
+
         //const response = await fetch(`http://localhost:3000/${endpoint}`);
         const response = await fetch(`https://allnews-production.up.railway.app/${endpoint}`);
 
         
         const newsItems = await response.json();
+        document.getElementById('loading-gif').style.display = 'none';
 
         const fetchTime = new Date();
         const fetchTimestamp = formatFetchTimestamp(fetchTime);
@@ -60,6 +63,8 @@ async function fetchNews(endpoint, newsType) {
             console.log('No new items.');
         }
     } catch (error) {
+        document.getElementById('loading-gif').style.display = 'none';
+
         console.error(`Error fetching news from ${endpoint}:`, error);
     }
 }

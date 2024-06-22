@@ -64,3 +64,8 @@ button:hover {
     color: #aaaaaa;
     margin-top: 10px;
 }
+
+#loading-gif {
+    display: block;
+    margin: 20px auto;
+}
