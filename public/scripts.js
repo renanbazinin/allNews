@@ -93,40 +93,28 @@ function startFetchingNews(endpoint, newsType) {
     }, 30000);
 }
 
-window.onload = function() {
-    document.querySelector('button[onclick*="bbc"]').addEventListener('click', () => {
-        startFetchingNews('bbc', 'BBC News');
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    function addClickListener(selector, endpoint, newsType) {
+        const button = document.querySelector(selector);
+        if (button) {
+            button.addEventListener('click', () => {
+                startFetchingNews(endpoint, newsType);
+            });
+        } else {
+            console.error(`Button not found: ${selector}`);
+        }
+    }
 
-    document.querySelector('button[onclick*="nyt"]').addEventListener('click', () => {
-        startFetchingNews('nyt', 'NYT News');
-    });
+    addClickListener('button[onclick*="bbc"]', 'bbc', 'BBC News');
+    addClickListener('button[onclick*="nyt"]', 'nyt', 'NYT News');
 
-    document.querySelector('button[onclick*="cnn"]').addEventListener('click', () => {
-        startFetchingNews('cnn', 'CNN News');
-    });
-    
-    document.querySelector('button[onclick*="ynet"]').addEventListener('click', () => {
-        startFetchingNews('ynet', 'Ynet News');
-    });
-    document.querySelector('button[onclick*="maariv"]').addEventListener('click', () => {
-        startFetchingNews('maariv', 'Maariv News');
-    });
+    addClickListener('button[onclick*="ynet"]', 'ynet', 'Ynet News');
+    addClickListener('button[onclick*="maariv"]', 'maariv', 'Maariv News');
+    addClickListener('button[onclick*="n12"]', 'n12', 'N12 News');
+    addClickListener('button[onclick*="rotter"]', 'rotter', 'Rotter News');
+    addClickListener('button[onclick*="walla"]', 'walla', 'Walla News');
+    addClickListener('button[onclick*="all-news"]', 'all-news', 'All News');
 
-    document.querySelector('button[onclick*="n12"]').addEventListener('click', () => {
-        startFetchingNews('n12', 'N12 News');
-    });
+    startFetchingNews('all-news', 'All News');
+});
 
-    document.querySelector('button[onclick*="rotter"]').addEventListener('click', () => {
-        startFetchingNews('rotter', 'Rotter News');
-    });
-
-    document.querySelector('button[onclick*="walla"]').addEventListener('click', () => {
-        startFetchingNews('walla', 'Walla News');
-    });
-
-    document.querySelector('button[onclick*="walla"]').addEventListener('click', () => {
-        startFetchingNews('all-news', 'All News');
-    });
-
-};
