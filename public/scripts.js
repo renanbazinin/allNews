@@ -28,7 +28,7 @@ async function fetchNews(endpoint, newsType) {
         // Check if there are new items and add them to the current news items
         let newItemsAdded = false;
         newsItems.forEach(item => {
-            const existingItem = currentNewsItems.find(news => news.guid === item.guid);
+            const existingItem = currentNewsItems.find(news => news.title === item.title);
             if (!existingItem) {
                 currentNewsItems.push(item);
                 newItemsAdded = true;
