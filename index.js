@@ -65,6 +65,33 @@ app.get('/walla', async (req, res) => {
 });
 
 
+app.get('/all-news', async (req, res) => {
+    try {
+        const [
+            bbcNews, nytNews, ynetNews, 
+            maarivNews, n12News, rotterNews, wallaNews
+        ] = await Promise.all([
+            fetchBBCNewsRSS(), fetchNYTNewsRSS(),  fetchYnetNewsRSS(), 
+            fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS()
+        ]);
+
+        const allNews = [
+            ...bbcNews, ...nytNews, ...ynetNews, 
+            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews
+        ];
+
+        allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+        const latestNews = allNews.slice(0, 50);
+
+        res.json(latestNews);
+    } catch (error) {
+        console.error('Error fetching all news:', error);
+        res.status(500).send('Error fetching all news');
+    }
+});
+
+
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
 });

@@ -217,7 +217,7 @@ async function fetchWallaNewsRSS() {
                 description: item.description.replace('<![CDATA[', '').replace(']]>', '').replace(/<img[^>]+>/, '').trim(),
                 link: item.link.replace('<![CDATA[', '').replace(']]>', ''),
                 guid: item.guid.replace('<![CDATA[', '').replace(']]>', ''),
-                pubDate: item.pubDate.replace('<![CDATA[', '').replace(']]>', ''),
+                pubDate: item.pubDate.replace('<![CDATA[', '').replace(']]>', '').replace('GMT', ''),
                 thumbnail: imageUrl
             };
         });

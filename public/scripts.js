@@ -118,4 +118,9 @@ window.onload = function() {
     document.querySelector('button[onclick*="walla"]').addEventListener('click', () => {
         startFetchingNews('walla', 'Walla News');
     });
+
+    document.querySelector('button[onclick*="walla"]').addEventListener('click', () => {
+        startFetchingNews('all-news', 'All News');
+    });
+
 };
