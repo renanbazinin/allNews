@@ -227,7 +227,7 @@ async function fetchWallaNewsRSS() {
                 guid: item.guid.replace('<![CDATA[', '').replace(']]>', ''),
                 pubDate: item.pubDate.replace('<![CDATA[', '').replace(']]>', '').replace('GMT', ''),
                 thumbnail: imageUrl,
-                ource: 'Walla'
+                source: 'Walla'
             };
         });
 
