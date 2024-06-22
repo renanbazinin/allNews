@@ -22,7 +22,9 @@ async function fetchBBCNewsRSS() {
             link: item.link,
             guid: item.guid._,
             pubDate: item.pubDate,
-            thumbnail: item['media:thumbnail'] ? item['media:thumbnail'].$.url : null
+            thumbnail: item['media:thumbnail'] ? item['media:thumbnail'].$.url : null,
+            source: 'BBC'
+
         }));
 
         return newsItems;
@@ -52,7 +54,9 @@ async function fetchNYTNewsRSS() {
             link: item.link,
             guid: item.guid._,
             pubDate: item.pubDate,
-            thumbnail: item['media:content'] ? item['media:content'].$.url : null
+            thumbnail: item['media:content'] ? item['media:content'].$.url : null,
+            source: 'NYT'
+
         }));
 
         return newsItems;
@@ -81,7 +85,8 @@ async function fetchYnetNewsRSS() {
             description: item.description,
             link: item.link,
             guid: item.guid,
-            pubDate: item.pubDate
+            pubDate: item.pubDate,
+            source: 'Ynet'
         }));
 
         return newsItems;
@@ -116,7 +121,8 @@ async function fetchMaarivNewsRSS() {
                 link: item.link,
                 guid: item.guid,
                 pubDate: item.pubDate,
-                thumbnail: imageUrl
+                thumbnail: imageUrl,
+                source: 'Maariv'
             };
         });
 
@@ -153,7 +159,8 @@ async function fetchN12NewsRSS() {
                 link: item.link,
                 guid: item.guid,
                 pubDate: item.pubDate,
-                thumbnail: imageUrl
+                thumbnail: imageUrl,
+                source: 'N12'
             };
         });
 
@@ -183,7 +190,8 @@ async function fetchRotterNewsRSS() {
             description: item.description,
             link: item.link,
             guid: item.guid,
-            pubDate: item.pubDate
+            pubDate: item.pubDate,
+            source: 'Rotter'
         }));
 
         return newsItems;
@@ -218,7 +226,8 @@ async function fetchWallaNewsRSS() {
                 link: item.link.replace('<![CDATA[', '').replace(']]>', ''),
                 guid: item.guid.replace('<![CDATA[', '').replace(']]>', ''),
                 pubDate: item.pubDate.replace('<![CDATA[', '').replace(']]>', '').replace('GMT', ''),
-                thumbnail: imageUrl
+                thumbnail: imageUrl,
+                ource: 'Walla'
             };
         });
 
