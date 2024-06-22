@@ -13,8 +13,8 @@ let fetchIntervalId = null;
 
 async function fetchNews(endpoint, newsType) {
     try {
-        const response = await fetch(`http://localhost:3000/${endpoint}`);
-        //const response = await fetch(`https://newsreader-production.up.railway.app/${endpoint}`);
+        //const response = await fetch(`http://localhost:3000/${endpoint}`);
+        const response = await fetch(`https://newsreader-production.up.railway.app/${endpoint}`);
 
         
         const newsItems = await response.json();
@@ -77,7 +77,7 @@ function startFetchingNews(endpoint, newsType) {
         newsContainer.setAttribute('dir', 'rtl');
     }
 
-    
+
     currentNewsItems = [];
     document.getElementById('news-container').innerHTML = `<h1>${newsType}</h1>`;
     fetchNews(endpoint, newsType);
