@@ -21,7 +21,6 @@ app.get('/', (req, res) => {
 app.get('/bbc', async (req, res) => {
     try {
         const newsItems = await fetchBBCNewsRSS();
-        console.log(newsItems);
         res.json(newsItems);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch news' });
@@ -81,9 +80,9 @@ app.get('/all-news', async (req, res) => {
         ];
 
         allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-
+        
         const latestNews = allNews.slice(0, 50);
-
+        
         res.json(latestNews);
     } catch (error) {
         console.error('Error fetching all news:', error);
