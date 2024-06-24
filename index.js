@@ -1,5 +1,5 @@
 const express = require('express');
-const { fetchBBCNewsRSS, fetchNYTNewsRSS,fetchYnetNewsRSS, fetchMaarivNewsRSS,fetchN12NewsRSS,fetchRotterNewsRSS ,fetchWallaNewsRSS} = require('./fetchNews');
+const { fetchBBCNewsRSS, fetchNYTNewsRSS,fetchYnetNewsRSS, fetchMaarivNewsRSS,fetchN12NewsRSS,fetchRotterNewsRSS ,fetchWallaNewsRSS, fetchCalcalistNewsRSS} = require('./fetchNews');
 const path = require('path');
 const cors = require('cors');
 
@@ -9,7 +9,6 @@ const port = process.env.PORT || 3000;
 
 // Use CORS middleware
 app.use(cors());
-
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -63,20 +62,26 @@ app.get('/walla', async (req, res) => {
     res.json(news);
 });
 
+app.get('/calcalist', async (req, res) => {
+    const news = await fetchCalcalistNewsRSS();
+    res.json(news);
+});
+
 
 app.get('/all-news', async (req, res) => {
     try {
         const [
             bbcNews, nytNews, ynetNews, 
-            maarivNews, n12News, rotterNews, wallaNews
+            maarivNews, n12News, rotterNews, wallaNews, calcalistNews // Add this line
         ] = await Promise.all([
             fetchBBCNewsRSS(), fetchNYTNewsRSS(),  fetchYnetNewsRSS(), 
-            fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS()
+            fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS(),
+            fetchCalcalistNewsRSS() // Add this line
         ]);
 
         const allNews = [
             ...bbcNews, ...nytNews, ...ynetNews, 
-            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews
+            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews // Add this line
         ];
 
         allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
@@ -90,6 +95,15 @@ app.get('/all-news', async (req, res) => {
     }
 });
 
+app.get('/rotterraw', async (req, res) => {
+    try {
+
+        res.json("bla");
+    } catch (error) {
+
+        res.status(500).send('Error fetching Rotter news HTML');
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

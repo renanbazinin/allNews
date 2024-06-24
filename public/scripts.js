@@ -113,7 +113,10 @@ document.addEventListener('DOMContentLoaded', function() {
     addClickListener('button[onclick*="n12"]', 'n12', 'N12 News');
     addClickListener('button[onclick*="rotter"]', 'rotter', 'Rotter News');
     addClickListener('button[onclick*="walla"]', 'walla', 'Walla News');
+    addClickListener('button[onclick*="walla"]', 'walla', 'Walla News');
+    addClickListener('button[onclick*="calcalist"]', 'calcalist', 'Calcalist News');
     addClickListener('button[onclick*="all-news"]', 'all-news', 'All News');
+
 
     startFetchingNews('all-news', 'All News');
 });

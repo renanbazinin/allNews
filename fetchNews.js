@@ -238,4 +238,58 @@ async function fetchWallaNewsRSS() {
     }
 }
 
-module.exports = { fetchBBCNewsRSS, fetchNYTNewsRSS,  fetchYnetNewsRSS, fetchMaarivNewsRSS, fetchN12NewsRSS, fetchRotterNewsRSS, fetchWallaNewsRSS };
+
+async function fetchCalcalistNewsRSS() {
+    try {
+        const response = await axios.get('https://www.calcalist.co.il/GeneralRSS/0,16335,L-3674,00.xml');
+        const rssData = response.data;
+
+        const parser = new xml2js.Parser({ explicitArray: false, cdata: true });
+        const result = await parser.parseStringPromise(rssData);
+
+        const items = result.rss.channel.item;
+
+        // Get the last 30 items
+        const latestItems = items.slice(0, 30);
+
+
+
+        const newsItems = latestItems.map(item => {
+            const altMatch = item.description.match(/alt='([^']*)'/);
+            const altText = altMatch ? altMatch[1] : '';
+            
+            const hasImageWithSrc = item.description.match(/<img[^>]*src=['"][^'"]+['"][^>]*>/);
+
+
+            
+            const descriptionContent = item.description && item.description._ ? item.description._ : item.description;
+            const descriptionWithAlt = hasImageWithSrc?`${descriptionContent}<p>${altText}</p>`:descriptionContent
+        
+            return {
+                title: item.title && item.title._ ? item.title._ : item.title,
+                description: descriptionWithAlt,
+                link: item.link,
+                guid: item.guid._,
+                pubDate: item.pubDate,
+                author: item.author,
+                category: item.category,
+            };
+        });
+
+        return newsItems;
+    } catch (error) {
+        console.error('Error fetching or parsing the RSS feed:', error);
+        throw error;
+    }
+}
+
+module.exports = { 
+    fetchBBCNewsRSS, 
+    fetchNYTNewsRSS, 
+    fetchYnetNewsRSS, 
+    fetchMaarivNewsRSS, 
+    fetchN12NewsRSS, 
+    fetchRotterNewsRSS, 
+    fetchWallaNewsRSS, 
+    fetchCalcalistNewsRSS  // Add this line
+};
