@@ -273,6 +273,8 @@ async function fetchCalcalistNewsRSS() {
                 pubDate: item.pubDate,
                 author: item.author,
                 category: item.category,
+                source: 'Calcalist'
+
             };
         });
 
