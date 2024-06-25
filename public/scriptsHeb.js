@@ -55,7 +55,7 @@ async function fetchNews(endpoint, newsType) {
                     <a href="${item.link}" target="_blank">Read more</a>
                     <p>Published on: ${pubDate.toLocaleString()}</p>
                     ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>` : `<p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>`}
-                    ${endpoint === 'all-news' ? `<p>Source: ${item.source}</p>` : ''}
+                    ${endpoint === 'all-news-heb' ? `<p>Source: ${item.source}</p>` : ''}
                 `;
                 newsContainer.appendChild(newsItem);
             });
