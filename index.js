@@ -95,6 +95,33 @@ app.get('/all-news', async (req, res) => {
     }
 });
 
+app.get('/all-news-heb', async (req, res) => {
+    try {
+        const [
+            ynetNews, 
+            maarivNews, n12News, rotterNews, wallaNews, calcalistNews // Add this line
+        ] = await Promise.all([
+            fetchYnetNewsRSS(), 
+            fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS(),
+            fetchCalcalistNewsRSS() // Add this line
+        ]);
+
+        const allNews = [
+            ...ynetNews, 
+            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews // Add this line
+        ];
+
+        allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        
+        const latestNews = allNews.slice(0, 50);
+        
+        res.json(latestNews);
+    } catch (error) {
+        console.error('Error fetching all news:', error);
+        res.status(500).send('Error fetching all news');
+    }
+});
+
 app.get('/rotterraw', async (req, res) => {
     try {
 

@@ -17,6 +17,7 @@ async function fetchNews(endpoint, newsType) {
 
         //const response = await fetch(`http://localhost:3000/${endpoint}`);
         const response = await fetch(`https://allnews-production.up.railway.app/${endpoint}`);
+        //const response = await fetch(`https://all-news.glitch.me//${endpoint}`);
 
         
         const newsItems = await response.json();
