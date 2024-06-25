@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="google-site-verification" content="jDk1s6N-IOBTrNM4PV6WqMvZVyTrDHe8nv0tHPHHvaQ" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renan News</title>
+    <link rel="icon" type="image/x-icon" href="https://i.imgur.com/y6Zos1q.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>News Fetcher</h1>
+    <div id="buttons-container">
+        <button onclick="startFetchingNews('bbc', 'BBC News')">
+            <img src="https://cdn.icon-icons.com/icons2/70/PNG/512/bbc_news_14062.png" alt="BBC News">
+        </button>
+        <button onclick="startFetchingNews('nyt', 'NYT News')">
+            <img src="https://cdn0.iconfinder.com/data/icons/circle-icons/512/new_york_times.png" alt="NYT News">
+        </button>
+        <button onclick="startFetchingNews('ynet', 'Ynet News')">
+            <img src="https://ynetads-10fd1.firebaseapp.com/assets/client/imgs/logo-ynet.png" alt="Ynet News">
+        </button>
+        <button onclick="startFetchingNews('maariv', 'Maariv News')">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Maariv_Online_Logo.png" alt="Maariv News">
+        </button>
+        <button onclick="startFetchingNews('n12', 'N12 News')">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Keshet12_2018.svg/1200px-Keshet12_2018.svg.png" alt="N12 News">
+        </button>
+        <button onclick="startFetchingNews('rotter', 'Rotter News')">
+            <img src="https://i.imgur.com/GCiZFly.png" alt="Rotter News">
+        </button>
+        <button onclick="startFetchingNews('walla', 'Walla News')">
+            <img src="https://upload.wikimedia.org/wikipedia/he/thumb/9/9c/%D7%A1%D7%9E%D7%9C%D7%99%D7%9C_%D7%95%D7%95%D7%90%D7%9C%D7%94%21.svg/1200px-%D7%A1%D7%9E%D7%9C%D7%99%D7%9C_%D7%95%D7%95%D7%90%D7%9C%D7%94%21.svg.png" alt="Walla News">
+        </button>
+
+        <button onclick="startFetchingNews('calcalist ', 'Calcalist News')">
+            <img src="https://i.imgur.com/R5OAqmj.png" alt="Calcalist  News">
+        </button>
+
+        <button onclick="startFetchingNews('all-news-heb', 'All News')">
+            <img src="https://i.imgur.com/y6Zos1q.png" alt="Fetch All News">
+        </button>
+
+    </div>
+    <div id="news-container" dir="ltr"></div>
+    <img id="loading-gif" src="https://upload.wikimedia.org/wikipedia/commons/a/ad/YouTube_loading_symbol_3_%28transparent%29.gif" alt="Loading..." style="display: none;">
+
+    <script src="scripts.js"></script>
+</body>
+</html>
