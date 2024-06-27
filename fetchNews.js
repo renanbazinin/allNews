@@ -284,7 +284,6 @@ async function fetchCalcalistNewsRSS() {
         throw error;
     }
 }
-
 async function fetchHaaretzNewsRSS() {
     try {
         const response = await axios.get('https://www.haaretz.co.il/srv/rss---feedly');
@@ -303,10 +302,23 @@ async function fetchHaaretzNewsRSS() {
 
             // Extract the URL from media:content and enclosure
             let thumbnail = null;
-            if (item['media:content'] && item['media:content']['@']) {
-                thumbnail = item['media:content']['@'].url;
-            } else if (item.enclosure && item.enclosure['@']) {
-                thumbnail = item.enclosure['@'].url;
+            if (item['media:content']) {
+                if (Array.isArray(item['media:content'])) {
+                    thumbnail = item['media:content'][0].$.url;
+                } else if (item['media:content'].$) {
+                    thumbnail = item['media:content'].$.url;
+                }
+            } else if (item.enclosure) {
+                if (Array.isArray(item.enclosure)) {
+                    thumbnail = item.enclosure[0].$.url;
+                } else if (item.enclosure.$) {
+                    thumbnail = item.enclosure.$.url;
+                }
+            }
+
+            // Remove ?height=81 from the thumbnail URL if it exists
+            if (thumbnail) {
+                thumbnail = thumbnail.split('?')[0];
             }
 
             return {
@@ -328,8 +340,6 @@ async function fetchHaaretzNewsRSS() {
         throw error;
     }
 }
-
-
 // Export the new function along with the existing ones
 module.exports = {
     fetchBBCNewsRSS,
