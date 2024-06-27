@@ -1,5 +1,5 @@
 const express = require('express');
-const { fetchBBCNewsRSS, fetchNYTNewsRSS,fetchYnetNewsRSS, fetchMaarivNewsRSS,fetchN12NewsRSS,fetchRotterNewsRSS ,fetchWallaNewsRSS, fetchCalcalistNewsRSS} = require('./fetchNews');
+const { fetchBBCNewsRSS, fetchNYTNewsRSS,fetchYnetNewsRSS, fetchMaarivNewsRSS,fetchN12NewsRSS,fetchRotterNewsRSS ,fetchWallaNewsRSS, fetchCalcalistNewsRSS,fetchHaaretzNewsRSS} = require('./fetchNews');
 const path = require('path');
 const cors = require('cors');
 
@@ -67,21 +67,25 @@ app.get('/calcalist', async (req, res) => {
     res.json(news);
 });
 
+app.get('/haaretz', async (req, res) => {
+    const news = await haaretzNews();
+    res.json(news);
+});
 
 app.get('/all-news', async (req, res) => {
     try {
         const [
             bbcNews, nytNews, ynetNews, 
-            maarivNews, n12News, rotterNews, wallaNews, calcalistNews // Add this line
+            maarivNews, n12News, rotterNews, wallaNews, calcalistNews,haaretzNews // Add this line
         ] = await Promise.all([
             fetchBBCNewsRSS(), fetchNYTNewsRSS(),  fetchYnetNewsRSS(), 
             fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS(),
-            fetchCalcalistNewsRSS() // Add this line
+            fetchCalcalistNewsRSS(),fetchHaaretzNewsRSS() // Add this line
         ]);
 
         const allNews = [
             ...bbcNews, ...nytNews, ...ynetNews, 
-            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews // Add this line
+            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews, ...haaretzNews // Add this line
         ];
 
         allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
@@ -99,7 +103,7 @@ app.get('/all-news-heb', async (req, res) => {
     try {
         const [
             ynetNews, 
-            maarivNews, n12News, rotterNews, wallaNews, calcalistNews // Add this line
+            maarivNews, n12News, rotterNews, wallaNews, calcalistNews, haaretzNews // Add this line
         ] = await Promise.all([
             fetchYnetNewsRSS(), 
             fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS(),

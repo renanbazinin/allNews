@@ -116,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     addClickListener('button[onclick*="walla"]', 'walla', 'Walla News');
     addClickListener('button[onclick*="walla"]', 'walla', 'Walla News');
     addClickListener('button[onclick*="calcalist"]', 'calcalist', 'Calcalist News');
+    addClickListener('button[onclick*="haaretz"]', 'haaretz', 'Haaretz News');
     addClickListener('button[onclick*="all-news-heb"]', 'all-news-heb', 'All News');
 
 

@@ -285,13 +285,50 @@ async function fetchCalcalistNewsRSS() {
     }
 }
 
-module.exports = { 
-    fetchBBCNewsRSS, 
-    fetchNYTNewsRSS, 
-    fetchYnetNewsRSS, 
-    fetchMaarivNewsRSS, 
-    fetchN12NewsRSS, 
-    fetchRotterNewsRSS, 
-    fetchWallaNewsRSS, 
-    fetchCalcalistNewsRSS  // Add this line
+async function fetchHaaretzNewsRSS() {
+    try {
+        const response = await axios.get('https://www.haaretz.co.il/cmlink/1.1619171');
+        const rssData = response.data;
+
+        const parser = new xml2js.Parser({ explicitArray: false, cdata: true });
+        const result = await parser.parseStringPromise(rssData);
+
+        const items = result.rss.channel.item;
+
+        // Process each item and add alt text to the description if image exists
+        const newsItems = items.map(item => {
+            const altMatch = item.description.match(/alt='([^']*)'/);
+            const altText = altMatch ? altMatch[1] : '';
+            const descriptionWithAlt = altText ? `${item.description}<p>${altText}</p>` : item.description;
+
+            return {
+                title: item.title,
+                description: descriptionWithAlt,
+                link: item.link,
+                guid: item.guid,
+                pubDate: item.pubDate,
+                author: item['dc:creator'],
+                thumbnail: item.enclosure ? item.enclosure.url : null,
+                category: item.category,
+            };
+        });
+
+        return newsItems;
+    } catch (error) {
+        console.error('Error fetching or parsing the RSS feed:', error);
+        throw error;
+    }
+}
+
+// Export the new function along with the existing ones
+module.exports = {
+    fetchBBCNewsRSS,
+    fetchNYTNewsRSS,
+    fetchYnetNewsRSS,
+    fetchMaarivNewsRSS,
+    fetchN12NewsRSS,
+    fetchRotterNewsRSS,
+    fetchWallaNewsRSS,
+    fetchCalcalistNewsRSS,
+    fetchHaaretzNewsRSS,
 };
