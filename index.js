@@ -68,7 +68,7 @@ app.get('/calcalist', async (req, res) => {
 });
 
 app.get('/haaretz', async (req, res) => {
-    const news = await haaretzNews();
+    const news = await fetchHaaretzNewsRSS();
     res.json(news);
 });
 
