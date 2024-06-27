@@ -107,12 +107,12 @@ app.get('/all-news-heb', async (req, res) => {
         ] = await Promise.all([
             fetchYnetNewsRSS(), 
             fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS(),
-            fetchCalcalistNewsRSS() // Add this line
+            fetchCalcalistNewsRSS(),fetchHaaretzNewsRSS() // Add this line
         ]);
 
         const allNews = [
             ...ynetNews, 
-            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews // Add this line
+            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews, ...haaretzNews // Add this line
         ];
 
         allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));

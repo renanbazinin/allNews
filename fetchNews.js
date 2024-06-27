@@ -287,7 +287,7 @@ async function fetchCalcalistNewsRSS() {
 
 async function fetchHaaretzNewsRSS() {
     try {
-        const response = await axios.get('https://www.haaretz.co.il/cmlink/1.1619171');
+        const response = await axios.get('https://www.haaretz.co.il/srv/rss---feedly');
         const rssData = response.data;
 
         const parser = new xml2js.Parser({ explicitArray: false, cdata: true });
@@ -301,6 +301,14 @@ async function fetchHaaretzNewsRSS() {
             const altText = altMatch ? altMatch[1] : '';
             const descriptionWithAlt = altText ? `${item.description}<p>${altText}</p>` : item.description;
 
+            // Extract the URL from media:content and enclosure
+            let thumbnail = null;
+            if (item['media:content'] && item['media:content']['@']) {
+                thumbnail = item['media:content']['@'].url;
+            } else if (item.enclosure && item.enclosure['@']) {
+                thumbnail = item.enclosure['@'].url;
+            }
+
             return {
                 title: item.title,
                 description: descriptionWithAlt,
@@ -308,8 +316,9 @@ async function fetchHaaretzNewsRSS() {
                 guid: item.guid,
                 pubDate: item.pubDate,
                 author: item['dc:creator'],
-                thumbnail: item.enclosure ? item.enclosure.url : null,
+                thumbnail: thumbnail,
                 category: item.category,
+                source: 'Haaretz'
             };
         });
 
@@ -319,6 +328,7 @@ async function fetchHaaretzNewsRSS() {
         throw error;
     }
 }
+
 
 // Export the new function along with the existing ones
 module.exports = {
