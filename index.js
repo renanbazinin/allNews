@@ -74,30 +74,32 @@ app.get('/haaretz', async (req, res) => {
 
 app.get('/all-news', async (req, res) => {
     try {
-        const [
-            bbcNews, nytNews, ynetNews, 
-            maarivNews, n12News, rotterNews, wallaNews, calcalistNews,haaretzNews // Add this line
-        ] = await Promise.all([
-            fetchBBCNewsRSS(), fetchNYTNewsRSS(),  fetchYnetNewsRSS(), 
-            fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(), fetchWallaNewsRSS(),
-            fetchCalcalistNewsRSS(),fetchHaaretzNewsRSS() // Add this line
+        const results = await Promise.allSettled([
+            fetchBBCNewsRSS(), fetchNYTNewsRSS(), fetchYnetNewsRSS(),
+            fetchMaarivNewsRSS(), fetchN12NewsRSS(), fetchRotterNewsRSS(),
+            fetchWallaNewsRSS(), fetchCalcalistNewsRSS(), fetchHaaretzNewsRSS()
         ]);
 
-        const allNews = [
-            ...bbcNews, ...nytNews, ...ynetNews, 
-            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews, ...haaretzNews // Add this line
-        ];
+        const allNews = results.reduce((acc, result) => {
+            if (result.status === 'fulfilled') {
+                return acc.concat(result.value);
+            } else {
+                console.error(`Error fetching news: ${result.reason}`);
+                return acc;
+            }
+        }, []);
 
         allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-        
+
         const latestNews = allNews.slice(0, 50);
-        
+
         res.json(latestNews);
     } catch (error) {
         console.error('Error fetching all news:', error);
         res.status(500).send('Error fetching all news');
     }
 });
+
 
 app.get('/all-news-heb', async (req, res) => {
     try {
@@ -111,8 +113,13 @@ app.get('/all-news-heb', async (req, res) => {
         ]);
 
         const allNews = [
-            ...ynetNews, 
-            ...maarivNews, ...n12News, ...rotterNews, ...wallaNews, ...calcalistNews, ...haaretzNews // Add this line
+            ...(ynetNews.status === 'fulfilled' ? ynetNews.value : []),
+            ...(maarivNews.status === 'fulfilled' ? maarivNews.value : []),
+            ...(n12News.status === 'fulfilled' ? n12News.value : []),
+            ...(rotterNews.status === 'fulfilled' ? rotterNews.value : []),
+            ...(wallaNews.status === 'fulfilled' ? wallaNews.value : []),
+            ...(calcalistNews.status === 'fulfilled' ? calcalistNews.value : []),
+            ...(haaretzNews.status === 'fulfilled' ? haaretzNews.value : [])
         ];
 
         allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
