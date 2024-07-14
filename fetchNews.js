@@ -86,6 +86,7 @@ async function fetchYnetNewsRSS() {
             link: item.link,
             guid: item.guid,
             pubDate: item.pubDate,
+            thumbnail: "https://i.imgur.com/FZP0Ncw.png",
             source: 'Ynet'
         }));
 
@@ -191,6 +192,7 @@ async function fetchRotterNewsRSS() {
             link: item.link,
             guid: item.guid,
             pubDate: item.pubDate,
+            thumbnail: "https://i.imgur.com/l2A2ZwB.png",
             source: 'Rotter'
         }));
 
