@@ -5,15 +5,21 @@ body {
     margin: 0;
     padding: 0;
 }
+
 h1 {
     text-align: center;
     padding: 20px;
 }
+
 #buttons-container {
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
     margin-bottom: 20px;
+    background-color: #1e1e1e;
+
+    padding: 10px;
+    border-radius: 10px;
 }
 
 #buttons-container button {
@@ -28,14 +34,17 @@ h1 {
     height: 38px;
     object-fit: contain;
 }
+
 button:hover {
     background-color: #9a67ea;
 }
+
 #news-container {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
 }
+
 .news-item {
     background-color: #1e1e1e;
     margin-bottom: 20px;
@@ -43,22 +52,27 @@ button:hover {
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
 .news-item h2 {
     margin-top: 0;
 }
+
 .news-item img {
-    width: 200px;
-    height: 200px;
-    border-radius: 10px;
+    width: 150px;
+    height: 150px;
+    border-radius: 12px;
     object-fit: cover;
 }
+
 .news-item a {
     color: #bb86fc;
     text-decoration: none;
 }
+
 .news-item a:hover {
     text-decoration: underline;
 }
+
 .fetch-timestamp {
     font-size: 0.8em;
     color: #aaaaaa;
@@ -68,4 +82,59 @@ button:hover {
 #loading-gif {
     display: block;
     margin: 20px auto;
+}
+
+footer {
+    background-color: rgba(30, 30, 30, 0.5); /* 50% transparency */
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    transition: all 0.3s ease;
+}
+
+footer p {
+    margin: 0;
+    font-size: 0.8em;
+}
+
+footer a {
+    color: #bb86fc;
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+footer.scrolled {
+    text-align: left;
+    padding: 5px 10px;
+    font-size: 0.7em;
+}
+
+#buttons-container button.active {
+    border: 2px solid #9a67ea;
+    box-shadow: 0 0 10px #9a67ea;
+}
+
+#scroll-to-top {
+    position: fixed;
+    bottom: 50px;
+    right: 30px;
+    background-color: rgba(70, 130, 180, 0.8); /* SteelBlue with 80% transparency */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px; /* Larger padding */
+    cursor: pointer;
+    display: none;
+    font-size: 26px; /* Larger font size */
+    transition: all 0.3s ease;
+}
+
+#scroll-to-top:hover {
+    background-color: rgba(70, 130, 180, 0.95); /* SteelBlue with 80% transparency */
 }

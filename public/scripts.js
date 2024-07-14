@@ -55,7 +55,7 @@ async function fetchNews(endpoint, newsType) {
                     <a href="${item.link}" target="_blank">Read more</a>
                     <p>Published on: ${pubDate.toLocaleString()}</p>
                     ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>` : `<p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>`}
-                    ${endpoint === 'all-news' ? `<p>Source: ${item.source}</p>` : ''}
+                    ${`<p>Publisher: ${item.source}</p>`}
                 `;
                 newsContainer.appendChild(newsItem);
             });
@@ -72,6 +72,18 @@ async function fetchNews(endpoint, newsType) {
 }
 
 function startFetchingNews(endpoint, newsType) {
+
+        const buttons = document.querySelectorAll('#buttons-container button');
+        buttons.forEach(button => button.classList.remove('active'));
+
+        // Add the active class to the clicked button
+        const button = document.querySelector(`button[onclick="startFetchingNews('${endpoint}', '${newsType}')"]`);
+        if (button) {
+            button.classList.add('active');
+        }
+
+
+
     if (fetchIntervalId !== null) {
         clearInterval(fetchIntervalId);
     }
@@ -92,6 +104,25 @@ function startFetchingNews(endpoint, newsType) {
     fetchIntervalId = setInterval(() => {
         fetchNews(endpoint, newsType);
     }, 30000);
+}
+
+// scripts.js
+window.addEventListener('scroll', function() {
+
+    const scrollToTopButton = document.getElementById('scroll-to-top');
+    const footer = document.querySelector('footer');
+    if (window.scrollY > 10) {
+        footer.classList.add('scrolled');
+        scrollToTopButton.style.display = 'block';
+    } else {
+        footer.classList.remove('scrolled');
+        scrollToTopButton.style.display = 'none';
+
+    }
+});
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
