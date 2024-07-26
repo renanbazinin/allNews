@@ -50,9 +50,11 @@ async function fetchNews(endpoint, newsType) {
                 <a href="${item.link}" target="_blank">Read more</a>
                 <p>Published on: ${pubDate.toLocaleString()}</p>
                 ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>` : `<p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>`}
-                ${`<p>Publisher: ${item.source}</p>`}
-                ${item.source === "Walla" ? '' : `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${item.title}\`, \`${item.description}\`, '${item.link}', this)"/>`}
+                <p class="publisher">Publisher: ${item.source}</p>
+                ${item.source === "Walla" ? '' : `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${item.title.replace(/`/g, '\\`')}\`, \`${item.description.replace(/`/g, '\\`')}\`, '${item.link}', this)"/><span class="copied-message">Share</span>`}
             `;
+            
+            
             newsContainer.appendChild(newsItem);
             });
 
@@ -69,17 +71,16 @@ async function fetchNews(endpoint, newsType) {
 function shareNews(time, title, description, link, element) {
     const textToCopy = `[${time}] - ${title}\n${description}\n${link}`;
     navigator.clipboard.writeText(textToCopy).then(() => {
-        const copiedMessage = document.createElement('span');
+        const copiedMessage = element.nextElementSibling;
         copiedMessage.textContent = 'News Copied To Clipboard';
-        copiedMessage.classList.add('copied-message');
-        element.parentNode.appendChild(copiedMessage);
         setTimeout(() => {
-            copiedMessage.remove();
+            copiedMessage.textContent = 'Share';
         }, 2000);
     }).catch(err => {
         console.error('Failed to copy text: ', err);
     });
 }
+
 
 function startFetchingNews(endpoint, newsType) {
     const buttons = document.querySelectorAll('#buttons-container button');

@@ -22,7 +22,6 @@ h1 {
     border-image: linear-gradient(45deg, #444444, #888888) 1;
 }
 
-
 #buttons-container button {
     background: none;
     border: none;
@@ -47,6 +46,7 @@ button:hover {
 }
 
 .news-item {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -55,7 +55,6 @@ button:hover {
     border-radius: 10px;
     background-color: #1e1e1e;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    
 }
 
 .news-item h2 {
@@ -145,15 +144,20 @@ footer.scrolled {
 }
 
 .share-news {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
     background: none;
     border: none;
     cursor: pointer;
     color: #bb86fc;
     text-decoration: underline;
-    font-size: 0.7em; /* Make the text smaller */
-    margin-right: auto; /* Align to the left */
-    display: block;
+    font-size: 0.2em; /* Make the text smaller */
     padding: 0;
+}
+.share-news img {
+    width: 20px; /* Adjust the width to make the image smaller */
+    height: auto; /* Maintain the aspect ratio */
 }
 
 .share-news:hover {
