@@ -51,7 +51,12 @@ async function fetchNews(endpoint, newsType) {
                 <p>Published on: ${pubDate.toLocaleString()}</p>
                 ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>` : `<p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>`}
                 <p class="publisher">Publisher: ${item.source}</p>
-                ${item.source === "Walla" ? '' : `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${item.title.replace(/`/g, '\\`')}\`, \`${item.description.replace(/`/g, '\\`')}\`, '${item.link}', this)"/><span class="copied-message">Share</span>`}
+                ${item.source === "Walla" ? 
+                  `
+                    <img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', '${item.title}', ' ', '${item.link}', this)"/>
+                    <span class="copied-message">Share</span>
+                  ` : 
+                  `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${item.title.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, \`${item.description.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${item.link}', this)"/><span class="copied-message">Share</span>`}
             `;
             
             
@@ -67,6 +72,7 @@ async function fetchNews(endpoint, newsType) {
         console.error(`Error fetching news from ${endpoint}:`, error);
     }
 }
+
 
 function shareNews(time, title, description, link, element) {
     const textToCopy = `[${time}] - ${title}\n${description}\n${link}`;
