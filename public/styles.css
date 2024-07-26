@@ -10,17 +10,18 @@ h1 {
     text-align: center;
     padding: 20px;
 }
-
 #buttons-container {
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
     margin-bottom: 20px;
-    background-color: #1e1e1e;
-
     padding: 10px;
     border-radius: 10px;
+    border: 4px solid transparent;
+    background-clip: padding-box;
+    border-image: linear-gradient(45deg, #444444, #888888) 1;
 }
+
 
 #buttons-container button {
     background: none;
@@ -46,11 +47,15 @@ button:hover {
 }
 
 .news-item {
-    background-color: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     margin-bottom: 20px;
     padding: 20px;
     border-radius: 10px;
+    background-color: #1e1e1e;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    
 }
 
 .news-item h2 {
@@ -137,4 +142,27 @@ footer.scrolled {
 
 #scroll-to-top:hover {
     background-color: rgba(70, 130, 180, 0.95); /* SteelBlue with 80% transparency */
+}
+
+.share-news {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #bb86fc;
+    text-decoration: underline;
+    font-size: 0.7em; /* Make the text smaller */
+    margin-right: auto; /* Align to the left */
+    display: block;
+    padding: 0;
+}
+
+.share-news:hover {
+    color: #9a67ea;
+}
+.copied-message {
+    display: block;
+    color: #bb86fc;
+    font-size: 0.7em; /* Make the text smaller */
+    margin-top: 5px;
+    margin-right: auto; /* Align to the left */
 }
