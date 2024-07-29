@@ -73,7 +73,7 @@ async function fetchNews(endpoint, newsType) {
 }
 
 function escapeQuotes(str) {
-    return str.replace(/"/g, '').replace(/'/g, '');
+    return str.replace(/<\/?[^>]+(>|$)/g, '').replace(/"/g, '').replace(/'/g, '');
 }
 
 function shareNews(time, title, description, link, element) {
