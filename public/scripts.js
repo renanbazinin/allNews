@@ -11,7 +11,7 @@ function formatFetchTimestamp(date) {
 let currentNewsItems = [];
 let fetchIntervalId = null;
 let url = "http://localhost:3000";
-url="https://all-news.glitch.me";
+url = "https://all-news.glitch.me";
 
 async function fetchNews(endpoint, newsType) {
     try {
@@ -38,6 +38,8 @@ async function fetchNews(endpoint, newsType) {
             currentNewsItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
             const newsContainer = document.getElementById('news-container');
+            const isLTR = endpoint === 'bbc' || endpoint === 'nyt';
+            const shareClass = isLTR ? 'share-news-right' : 'share-news-left';
             newsContainer.innerHTML = `<h1>${newsType}</h1>`;
             currentNewsItems.forEach(item => {
                 const pubDate = new Date(item.pubDate);
@@ -51,14 +53,11 @@ async function fetchNews(endpoint, newsType) {
                 <p>Published on: ${pubDate.toLocaleString()}</p>
                 ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>` : `<p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>`}
                 <p class="publisher">Publisher: ${item.source}</p>
-                ${item.source === "WallaALT" ? 
-                  `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', '${escapeQuotes(item.title)}', ' ', '${item.link}', this)"/>
-                   <span class="copied-message">Share</span>` : 
-                  `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${escapeQuotes(item.title)}\`, \`${escapeQuotes(item.description)}\`, '${item.link}', this)"/><span class="copied-message">Share</span>`}
+                <img class="share-news ${shareClass}" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', '${escapeQuotes(item.title)}', '${escapeQuotes(item.description)}', '${item.link}', this)"/>
+                <span class="copied-message">Share</span>
             `;
             
-            
-            newsContainer.appendChild(newsItem);
+                newsContainer.appendChild(newsItem);
             });
 
             console.log('News items fetched and displayed.');
@@ -88,7 +87,6 @@ function shareNews(time, title, description, link, element) {
     });
 }
 
-
 function startFetchingNews(endpoint, newsType) {
     const buttons = document.querySelectorAll('#buttons-container button');
     buttons.forEach(button => button.classList.remove('active'));
@@ -104,8 +102,10 @@ function startFetchingNews(endpoint, newsType) {
 
     const newsContainer = document.getElementById('news-container');
     if (endpoint === 'bbc' || endpoint === 'nyt') {
+        document.body.setAttribute('dir', 'ltr');
         newsContainer.setAttribute('dir', 'ltr');
     } else {
+        document.body.setAttribute('dir', 'rtl');
         newsContainer.setAttribute('dir', 'rtl');
     }
 
