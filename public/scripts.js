@@ -44,19 +44,18 @@ async function fetchNews(endpoint, newsType) {
                 const militaryTime = formatMilitaryTime(pubDate);
                 const newsItem = document.createElement('div');
                 newsItem.classList.add('news-item');
+                console.log(item.title)
                 newsItem.innerHTML = `
-                <h2>[${militaryTime}] : ${item.title}</h2>
-                <p>${item.description}</p>
+                <h2>[${militaryTime}] : ${escapeQuotes(item.title)}</h2>
+                <p>${escapeQuotes(item.description)}</p>
                 <a href="${item.link}" target="_blank">Read more</a>
                 <p>Published on: ${pubDate.toLocaleString()}</p>
                 ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>` : `<p class="fetch-timestamp">Fetched on: ${fetchTimestamp}</p>`}
                 <p class="publisher">Publisher: ${item.source}</p>
-                ${item.source === "Walla" ? 
-                  `
-                    <img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', '${item.title}', ' ', '${item.link}', this)"/>
-                    <span class="copied-message">Share</span>
-                  ` : 
-                  `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${item.title.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, \`${item.description.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${item.link}', this)"/><span class="copied-message">Share</span>`}
+                ${item.source === "WallaALT" ? 
+                  `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', '${escapeQuotes(item.title)}', ' ', '${item.link}', this)"/>
+                   <span class="copied-message">Share</span>` : 
+                  `<img class="share-news" src="https://i.imgur.com/s06GGHp.png" onclick="shareNews('${militaryTime}', \`${escapeQuotes(item.title)}\`, \`${escapeQuotes(item.description)}\`, '${item.link}', this)"/><span class="copied-message">Share</span>`}
             `;
             
             
@@ -73,6 +72,9 @@ async function fetchNews(endpoint, newsType) {
     }
 }
 
+function escapeQuotes(str) {
+    return str.replace(/"/g, '').replace(/'/g, '');
+}
 
 function shareNews(time, title, description, link, element) {
     const textToCopy = `[${time}] - ${title}\n${description}\n${link}`;
