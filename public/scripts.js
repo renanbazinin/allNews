@@ -44,7 +44,6 @@ async function fetchNews(endpoint, newsType) {
                 const militaryTime = formatMilitaryTime(pubDate);
                 const newsItem = document.createElement('div');
                 newsItem.classList.add('news-item');
-                console.log(item.title)
                 newsItem.innerHTML = `
                 <h2>[${militaryTime}] : ${escapeQuotes(item.title)}</h2>
                 <p>${escapeQuotes(item.description)}</p>
