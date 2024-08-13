@@ -10,10 +10,12 @@ h1 {
     text-align: center;
     padding: 20px;
 }
+
 #buttons-container {
     display: flex;
-    justify-content: space-around;
     flex-wrap: wrap;
+    justify-content: center; /* Center the content */
+    gap: 20px; /* Increased spacing between buttons */
     margin-bottom: 20px;
     padding: 10px;
     border-radius: 10px;
@@ -21,24 +23,45 @@ h1 {
     background-clip: padding-box;
     border-image: linear-gradient(45deg, #444444, #888888) 1;
     direction: ltr; /* Ensure the direction is fixed to LTR */
+    max-width: 600px; /* Set a max-width to control the container's width */
+    margin-left: auto; /* Center the container */
+    margin-right: auto; /* Center the container */
 }
 
-#buttons-container button {
-    background: none;
-    border: none;
+
+#buttons-container label {
     cursor: pointer;
-    margin: 5px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
+    flex-basis: calc(20% - 20px); /* Flex basis to ensure 5 items per row */
+}
+#buttons-container input[type="checkbox"] {
+    display: none; /* Hide the checkbox */
 }
 
 #buttons-container img {
     width: 38px;
     height: 38px;
     object-fit: contain;
+    transition: transform 0.3s ease;
 }
 
-button:hover {
-    background-color: #9a67ea;
+#buttons-container label:hover img {
+    transform: scale(1.1); /* Slightly enlarge the image on hover */
 }
+
+#buttons-container input[type="checkbox"]:checked + img,
+#buttons-container img.selected {
+    border: 2px solid #9a67ea; /* Add the border to the selected item */
+    border-radius: 5px;
+    box-shadow: 0 0 10px #9a67ea; /* Add a glow effect */
+}
+
+
 
 #news-container {
     max-width: 800px;
@@ -120,11 +143,6 @@ footer.scrolled {
     font-size: 0.7em;
 }
 
-#buttons-container button.active {
-    border: 2px solid #9a67ea;
-    box-shadow: 0 0 10px #9a67ea;
-}
-
 #scroll-to-top {
     position: fixed;
     bottom: 50px;
@@ -141,7 +159,7 @@ footer.scrolled {
 }
 
 #scroll-to-top:hover {
-    background-color: rgba(70, 130, 180, 0.95); /* SteelBlue with 80% transparency */
+    background-color: rgba(70, 130, 180, 0.95); /* SteelBlue with 95% transparency */
 }
 
 .share-news {
@@ -156,7 +174,7 @@ footer.scrolled {
     padding: 0;
 }
 .share-news img {
-    width: 20px; /* Adjust the width to make the image smaller */
+    width: 11px; /* Adjust the width to make the image smaller */
     height: auto; /* Maintain the aspect ratio */
 }
 
@@ -179,3 +197,37 @@ footer.scrolled {
     margin-top: 5px;
     margin-right: auto; /* Align to the left */
 }
+
+#refresh-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: #1e1e1e;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    color: #e0e0e0;
+}
+
+#refresh-button {
+    background-color: #bb86fc;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+#refresh-button:hover {
+    background-color: #9a67ea;
+}
+
+#last-updated {
+    font-size: 14px;
+    margin: 0;
+}
+
+
