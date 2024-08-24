@@ -141,7 +141,7 @@ function displayNewsItems() {
             // Special case: Ignore description if source is Maariv and description is empty
             const description = (item.newsType === 'maariv' ) ? "" : item.description;
             newsItem.innerHTML = `
-                <p>${militaryTime} - ${escapeQuotes(item.title)} <span class="publisher">(${item.source})</span></p>
+                  <p>${militaryTime} - ${escapeQuotes(item.title)} <span class="publisher">(<a href="${item.link}" target="_blank">${item.source}</a>)</span></p>
                 <div class="news-description" id="description-${index}" style="display: none;">
                     <p>${escapeQuotes(description)}</p>
                 </div>
