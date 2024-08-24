@@ -51,7 +51,10 @@
         <img src="https://i.imgur.com/H65siyA.png" alt="Fetch All News" onclick="reloadPage()">
     </label>
 </div>
-
+<div id="mode-switcher">
+    <button id="list-mode-btn" onclick="setDisplayMode('list')">List Mode</button>
+    <button id="card-mode-btn" onclick="setDisplayMode('card')">Card Mode</button>
+</div>
 <div id="refresh-container">
     <button id="refresh-button" onclick="refreshNews(true)">Refresh</button>
     <p id="last-updated">Last Updated: --:--:--</p>

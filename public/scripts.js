@@ -8,11 +8,19 @@ function formatFetchTimestamp(date) {
     return `${date.toLocaleString()}`;
 }
 
+
+let currentDisplayMode = 'card'; // Default mode
+
 let newsData = {};  // Object to store news items for each source
 let fetchIntervalId = null;
 let refreshClickCount = 0;
 const maxRefreshClicks = 3;
 const refreshCooldownTime = 60000; // 60 seconds
+
+function setDisplayMode(mode) {
+    currentDisplayMode = mode;
+    displayNewsItems(); // Re-render news items in the new mode
+}
 
 async function fetchNews(endpoint, newsType) {
     const checkbox = document.getElementById(`${endpoint}-checkbox`);
@@ -35,12 +43,12 @@ async function fetchNews(endpoint, newsType) {
         }
 
         // Set the text direction based on the endpoint
-        const newsContainer = document.getElementById('news-container');
-        if (endpoint === 'bbc' || endpoint === 'nyt') {
-            newsContainer.setAttribute('dir', 'ltr');
-        } else {
-            newsContainer.setAttribute('dir', 'rtl');
-        }
+        //const newsContainer = document.getElementById('news-container');
+       //if (endpoint === 'bbc' || endpoint === 'nyt') {
+        //    newsContainer.setAttribute('dir', 'ltr');
+       // } else {
+       ///     newsContainer.setAttribute('dir', 'rtl');
+       // }
 
         // Store news items in the newsData object
         newsData[endpoint] = newsItems.map(item => {
@@ -115,41 +123,61 @@ function displayNewsItems() {
     
     let allNewsItems = [];
     
-    console.log("Merging news items from selected sources...");
     for (const source in newsData) {
-        console.log(`Adding news items from source: ${source}`);
         allNewsItems = allNewsItems.concat(newsData[source]);
     }
 
-    console.log("Sorting news items by publication date...");
     allNewsItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-    console.log("Displaying news items...");
-    allNewsItems.forEach(item => {
+    allNewsItems.forEach((item, index) => {
         const pubDate = new Date(item.pubDate);
         const militaryTime = formatMilitaryTime(pubDate);
         const newsItem = document.createElement('div');
-        newsItem.classList.add('news-item');
+        
+        if (currentDisplayMode === 'list') {
+            newsItem.classList.add('news-item-list');
+            newsItem.setAttribute('data-index', index);
 
-        // Set direction based on the source
-        if (item.newsType === 'BBC News' || item.newsType === 'NYT News') {
-            newsItem.setAttribute('dir', 'ltr');
+            // Special case: Ignore description if source is Maariv and description is empty
+            const description = (item.newsType === 'maariv' ) ? "" : item.description;
+            newsItem.innerHTML = `
+                <p>${militaryTime} - ${escapeQuotes(item.title)} <span class="publisher">(${item.source})</span></p>
+                <div class="news-description" id="description-${index}" style="display: none;">
+                    <p>${escapeQuotes(description)}</p>
+                </div>
+            `;
+
+            if (description && description.trim() !== "") {
+                newsItem.addEventListener('click', function () {
+                    toggleDescription(index);
+                });
+                newsItem.classList.add('clickable'); // Add a class to indicate it's clickable
+            }
         } else {
-            newsItem.setAttribute('dir', 'rtl');
+            // Card mode as previously defined
+            newsItem.classList.add('news-item');
+            newsItem.innerHTML = `
+                <h2>[${militaryTime}] : ${escapeQuotes(item.title)}</h2>
+                <p>${escapeQuotes(item.description)}</p>
+                <a href="${item.link}" target="_blank">Read more</a>
+                <p>Published on: ${pubDate.toLocaleString()}</p>
+                ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${formatFetchTimestamp(new Date())}</p>` : `<p class="fetch-timestamp">Fetched on: ${formatFetchTimestamp(new Date())}</p>`}
+                <p class="publisher">Publisher: ${item.source}</p>
+            `;
         }
 
-        newsItem.innerHTML = `
-            <h2>[${militaryTime}] : ${escapeQuotes(item.title)}</h2>
-            <p>${escapeQuotes(item.description)}</p>
-            <a href="${item.link}" target="_blank">Read more</a>
-            <p>Published on: ${pubDate.toLocaleString()}</p>
-            ${item.thumbnail ? `<img src="${item.thumbnail}" alt="Thumbnail"><p class="fetch-timestamp">Fetched on: ${formatFetchTimestamp(new Date())}</p>` : `<p class="fetch-timestamp">Fetched on: ${formatFetchTimestamp(new Date())}</p>`}
-            <p class="publisher">Publisher: ${item.source}</p>
-        `;
         newsContainer.appendChild(newsItem);
     });
+}
 
-    console.log("News items displayed.");
+
+function toggleDescription(index) {
+    const descriptionDiv = document.getElementById(`description-${index}`);
+    if (descriptionDiv.style.display === 'none') {
+        descriptionDiv.style.display = 'block';
+    } else {
+        descriptionDiv.style.display = 'none';
+    }
 }
 
 function escapeQuotes(str) {
@@ -186,8 +214,7 @@ function refreshNews(calledByUser=false) {
         refreshClickCount = 0;
     }, refreshCooldownTime);
     
-    fetchNews('nyt', 'NYT News')
-    fetchNews('bbc', 'BBC News')
+
 }
 
 function updateLastUpdatedTime() {
@@ -211,8 +238,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         toggleSourceSelection(checkbox.name, checkbox.name);
     });
 
-    fetchNews('nyt', 'NYT News');
-    fetchNews('bbc', 'BBC News');
+
     updateLastUpdatedTime();  // Initialize the last updated time when the page loads
     refreshNews();
 });
