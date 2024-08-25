@@ -240,20 +240,31 @@ footer.scrolled {
 }
 
 #mode-switcher button {
-    background-color: #bb86fc;
+    background-color: #00bcd4; /* Change color to green */
     border: none;
     color: white;
-    padding: 10px 20px;
-    margin: 0 10px;
+    padding: 8px 15px; /* Smaller padding for smaller buttons */
+    margin: 0 8px;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
+    font-size: 14px; /* Smaller font size */
+    transition: background-color 0.3s ease, transform 0.2s;
 }
 
 #mode-switcher button:hover {
-    background-color: #9a67ea;
+    background-color: #0097a7 ; /* Darker green on hover */
+    transform: scale(1.05); /* Slightly enlarge on hover */
 }
+
+#increase-font, #decrease-font {
+    background-color: #ff9800; /* Orange color for A+ and A- */
+    padding: 8px 10px;
+    margin: 0 5px;
+    font-size: 16px;
+    width: 40px; /* Smaller width */
+    border-radius: 5px;
+}
+
 
 .news-item-list {
     background-color: transparent;

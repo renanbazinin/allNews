@@ -9,7 +9,7 @@ function formatFetchTimestamp(date) {
 }
 
 
-let currentDisplayMode = 'card'; // Default mode
+let currentDisplayMode = 'list'; // Default mode
 
 let newsData = {};  // Object to store news items for each source
 let fetchIntervalId = null;
@@ -223,6 +223,16 @@ function updateLastUpdatedTime() {
     document.getElementById('last-updated').textContent = `Last Updated: ${formattedTime}`;
     console.log(`Last Updated Time set to: ${formattedTime}`);
 }
+function adjustFontSize(change) {
+    const newsContainer = document.getElementById('news-container');
+    const currentFontSize = window.getComputedStyle(newsContainer, null).getPropertyValue('font-size');
+    const newFontSize = parseFloat(currentFontSize) + change;
+
+    if (newFontSize >= 12 && newFontSize <= 24) { // Restrict font size between 12px and 24px for good UX
+        newsContainer.style.fontSize = newFontSize + 'px';
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded', async function() {
     const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
