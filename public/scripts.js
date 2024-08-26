@@ -9,6 +9,7 @@ function formatFetchTimestamp(date) {
 }
 
 
+
 let currentDisplayMode = 'list'; // Default mode
 
 let newsData = {};  // Object to store news items for each source
@@ -252,3 +253,36 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateLastUpdatedTime();  // Initialize the last updated time when the page loads
     refreshNews();
 });
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
+
+    // Add click and double-click event listeners to each checkbox
+    checkboxes.forEach(checkbox => {
+        const label = checkbox.parentElement;
+        label.addEventListener('click', function() {
+            toggleSourceSelection(checkbox.id.replace('-checkbox', ''), checkbox.name);
+        });
+        
+        label.addEventListener('dblclick', function() {
+            selectOnlyThisSource(checkbox.id.replace('-checkbox', ''), checkbox.name);
+        });
+    });
+});
+
+function selectOnlyThisSource(selectedEndpoint, selectedNewsType) {
+    const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
+    
+    // Deselect all checkboxes except the one that was double-clicked
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    const selectedCheckbox = document.getElementById(`${selectedEndpoint}-checkbox`);
+    selectedCheckbox.checked = true;
+    
+    // Clear all news data and fetch only for the selected source
+    newsData = {};
+    fetchNews(selectedEndpoint, selectedNewsType);
+}
