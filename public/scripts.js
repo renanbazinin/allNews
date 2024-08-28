@@ -286,3 +286,21 @@ function selectOnlyThisSource(selectedEndpoint, selectedNewsType) {
     newsData = {};
     fetchNews(selectedEndpoint, selectedNewsType);
 }
+
+
+function filterNews() {
+    const query = document.getElementById('search-bar').value.toLowerCase();
+    const newsContainer = document.getElementById('news-container');
+    const allNewsItems = newsContainer.querySelectorAll('.news-item, .news-item-list');
+    
+    allNewsItems.forEach(item => {
+        const title = item.querySelector('p, h2').innerText.toLowerCase();
+        const description = item.querySelector('.news-description p') ? item.querySelector('.news-description p').innerText.toLowerCase() : '';
+        
+        if (title.includes(query) || description.includes(query)) {
+            item.style.display = ''; // Show the item if it matches the search query
+        } else {
+            item.style.display = 'none'; // Hide the item if it doesn't match
+        }
+    });
+}

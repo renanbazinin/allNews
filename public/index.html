@@ -61,6 +61,9 @@
     <button id="refresh-button" onclick="refreshNews(true)">Refresh</button>
     <p id="last-updated">Last Updated: --:--:--</p>
 </div>
+<div id="search-container">
+    <input type="text" id="search-bar" placeholder="Search news..." oninput="filterNews()" />
+</div>
 <div id="news-container" dir="ltr"></div>
 <img id="loading-gif" src="https://upload.wikimedia.org/wikipedia/commons/a/ad/YouTube_loading_symbol_3_%28transparent%29.gif" alt="Loading..." style="display: none;">
 <footer>

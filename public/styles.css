@@ -307,3 +307,27 @@ footer.scrolled {
     margin: 0;
     color: #bbbbbb;
 }
+
+#search-container {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+    text-align: center;
+}
+
+#search-bar {
+    width: auto;
+    direction: rtl;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #444;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    font-size: 16px;
+    outline: none;
+    transition: border 0.3s ease;
+}
+
+#search-bar:focus {
+    border-color: #00bcd4; /* Match the color scheme */
+}
