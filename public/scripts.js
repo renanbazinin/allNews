@@ -61,6 +61,7 @@ async function fetchNews(endpoint, newsType) {
 
         displayNewsItems();
         updateLastUpdatedTime();  // Update the last updated time after displaying news
+        filterNews() 
     } catch (error) {
         document.getElementById('loading-gif').style.display = 'none';
         console.error(`Error fetching news from ${endpoint}:`, error);
@@ -103,6 +104,9 @@ async function fetchSelectedNews(justRefresh=true) {
     }
 
     updateLastUpdatedTime();  // Ensure the time is updated during auto-refresh
+
+    filterNews();
+
     if(!justRefresh){
     fetchIntervalId = setInterval(async () => {
         console.log("Auto-refreshing news sources...");
