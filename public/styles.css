@@ -1,6 +1,6 @@
 body {
-    background-color: #121212;
-    color: #e0e0e0;
+    background-color: #1c1c1c; /* Softer dark gray */
+    color: #dcdcdc; /* Light gray for better contrast */
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
@@ -56,7 +56,7 @@ h1 {
 
 #buttons-container input[type="checkbox"]:checked + img,
 #buttons-container img.selected {
-    border: 2px solid #9a67ea; /* Add the border to the selected item */
+    border: 2px solid #21a1f1; /* Highlight active source */
     border-radius: 5px;
     box-shadow: 0 0 10px #9a67ea; /* Add a glow effect */
 }
@@ -78,7 +78,9 @@ h1 {
     margin-bottom: 20px;
     padding: 20px;
     border-radius: 10px;
-    background-color: #1e1e1e;
+    background-color: #2a2a2a; /* Dark gray for better contrast */
+    color: #eaeaea; /* Slightly brighter text */
+
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -93,12 +95,15 @@ h1 {
     object-fit: cover;
 }
 
-.news-item a {
-    color: #bb86fc;
+.news-item a,
+footer a {
+    color: #61dafb; /* Bright blue for links */
     text-decoration: none;
 }
 
-.news-item a:hover {
+.news-item a:hover,
+footer a:hover {
+    color: #21a1f1; /* Slightly darker blue on hover */
     text-decoration: underline;
 }
 
