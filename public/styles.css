@@ -336,3 +336,14 @@ footer.scrolled {
 #search-bar:focus {
     border-color: #00bcd4; /* Match the color scheme */
 }
+
+
+.publisher a {
+    color: #ff9800; /* Bright orange for good visibility */
+    text-decoration: none; /* Remove underline */
+}
+
+.publisher a:hover {
+    color: #ffb74d; /* Slightly lighter orange on hover */
+    text-decoration: underline; /* Add underline on hover for clarity */
+}
