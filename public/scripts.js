@@ -30,38 +30,27 @@ async function fetchNews(endpoint, newsType) {
         return;
     }
 
-    try {
-        updateLastUpdatedTime(false); // Start the loading animation
-        document.getElementById('loading-gif').style.display = 'block';
-        console.log(`Fetching news from ${newsType} (${endpoint})...`);
+try {
+    updateLastUpdatedTime(false); // Start the loading animation
+    document.getElementById('loading-gif').style.display = 'block';
 
-        const response = await fetch(`https://all-news.glitch.me/${endpoint}`);
-        const newsItems = await response.json();
-        document.getElementById('loading-gif').style.display = 'none';
+    const response = await fetch(`https://all-news.glitch.me/${endpoint}`);
+    const newsItems = await response.json();
+    document.getElementById('loading-gif').style.display = 'none';
 
-        if (!checkbox.checked) {
-            console.log(`Source ${newsType} (${endpoint}) was deselected during fetch, not storing data.`);
-            return;
-        }
-
-        // Store news items
-        newsData[endpoint] = newsItems.map(item => {
-            item.newsType = newsType;
-            return item;
-        });
-
-        console.log(`Fetched and stored news from ${newsType}:`, newsData[endpoint]);
-
-        displayNewsItems();
-        updateLastUpdatedTime(true); // Final time update on success
-        filterNews();
-    } catch (error) {
-        document.getElementById('loading-gif').style.display = 'none';
-        console.error(`Error fetching news from ${newsType} (${endpoint}):`, error);
-    
-        document.getElementById('last-updated').textContent = `Last Updated: Fetch Failed for ${newsType} (${endpoint})`;
-        stopLoadingAnimation();
+    if (!checkbox.checked) {
+        return; // Skip storing if deselected during fetch
     }
+
+    // Store and display news
+    newsData[endpoint] = newsItems.map(item => ({ ...item, newsType }));
+    displayNewsItems();
+} catch (error) {
+    document.getElementById('loading-gif').style.display = 'none';
+    console.error(`Error fetching news from ${newsType} (${endpoint}):`, error);
+    throw error; // Propagate error to `fetchSelectedNews`
+}
+
 }
 
 
@@ -70,52 +59,86 @@ function toggleSourceSelection(endpoint, newsType) {
 
     if (checkbox && checkbox.checked) {
         console.log(`Selecting source: ${newsType} (${endpoint})`);
-        fetchNews(endpoint, newsType);  // Fetch the news for the selected source
+        fetchNews(endpoint, newsType);  
     } else {
         console.log(`Deselecting source: ${newsType} (${endpoint})`);
 
-        delete newsData[endpoint];  // Remove news from deselected source
-        console.log(`Deleted news data for ${newsType}:`, newsData);
+      
+        if (newsData[endpoint]) {
+            delete newsData[endpoint]; 
+            console.log(`Deleted news data for ${newsType}:`, newsData);
+        }
 
-        displayNewsItems();  // Update display after removal
+        displayNewsItems(); 
     }
 }
 
-async function fetchSelectedNews(justRefresh=true) {
-    if (fetchIntervalId !== null && !justRefresh) {
-        clearInterval(fetchIntervalId);
-        fetchIntervalId = null;
-    }
 
-    console.log("Starting fetch for selected news sources...");
+async function fetchSelectedNews(justRefresh = true) {
     const endpoints = [
         'bbc', 'nyt', 'ynet', 'maariv', 'n12', 'rotter', 'walla', 'calcalist', 'haaretz'
     ];
 
+    let allFetchSucceeded = true; // Track overall fetch success
+    const failedEndpoints = []; // Track failed endpoints
+
     for (const endpoint of endpoints) {
         const checkbox = document.getElementById(`${endpoint}-checkbox`);
         if (checkbox && checkbox.checked) {
-            console.log(`Fetching news for selected source: ${checkbox.name}`);
-            await fetchNews(endpoint, checkbox.name);
+            try {
+                await fetchNews(endpoint, checkbox.name);
+            } catch (error) {
+                allFetchSucceeded = false; // Mark as failed if any fetch fails
+                failedEndpoints.push(`${checkbox.name} (${endpoint})`); // Record the endpoint
+            }
         }
     }
 
-    updateLastUpdatedTime();  // Ensure the time is updated during auto-refresh
+    if (failedEndpoints.length > 0) {
+        displayFetchErrors(failedEndpoints); // Display errors if any
+    } else {
+        clearFetchErrors(); // Clear previous errors if all succeed
+    }
 
+    if (allFetchSucceeded) {
+        lastSuccessfulUpdate = new Date(); // Update only if all fetches succeed
+    }
+
+    updateLastUpdatedTime(allFetchSucceeded); // Pass success state to determine display
     filterNews();
 
-    if(!justRefresh){
-    fetchIntervalId = setInterval(async () => {
-        console.log("Auto-refreshing news sources...");
-        for (const endpoint of endpoints) {
-            const checkbox = document.getElementById(`${endpoint}-checkbox`);
-            if (checkbox && checkbox.checked) {
-                console.log(`Auto-refresh fetching news for: ${checkbox.name}`);
-                await fetchNews(endpoint, checkbox.name);
+    if (!justRefresh) {
+        fetchIntervalId = setInterval(async () => {
+            console.log("Auto-refreshing news sources...");
+            for (const endpoint of endpoints) {
+                const checkbox = document.getElementById(`${endpoint}-checkbox`);
+                if (checkbox && checkbox.checked) {
+                    console.log(`Auto-refresh fetching news for: ${checkbox.name}`);
+                    await fetchNews(endpoint, checkbox.name);
+                }
             }
-        }
-        updateLastUpdatedTime();  // Update time with every auto-refresh
-    }, 30000);
+            updateLastUpdatedTime(); // Update time with every auto-refresh
+        }, 30000);
+    }
+}
+
+function displayFetchErrors(failedEndpoints) {
+    let errorContainer = document.getElementById('error-container');
+    if (!errorContainer) {
+        errorContainer = document.createElement('div');
+        errorContainer.id = 'error-container';
+        errorContainer.style.color = 'red';
+        errorContainer.style.marginBottom = '10px';
+        const searchContainer = document.getElementById('search-container');
+        searchContainer.parentNode.insertBefore(errorContainer, searchContainer);
+    }
+    errorContainer.innerHTML = `Failed to fetch news from: ${failedEndpoints.join(', ')}`;
+}
+
+function clearFetchErrors() {
+    const errorContainer = document.getElementById('error-container');
+    if (errorContainer) {
+        errorContainer.remove();
     }
 }
 
@@ -219,18 +242,6 @@ function refreshNews(calledByUser=false) {
 
 }
 
-function updateLastUpdatedTime(finalTime = true) {
-    const lastUpdatedElement = document.getElementById('last-updated');
-    if (finalTime) {
-        const lastUpdatedTime = new Date();
-        const formattedTime = lastUpdatedTime.toLocaleTimeString('en-US', { hour12: false });
-        lastUpdatedElement.textContent = `Last Updated: ${formattedTime}`;
-        console.log(`Last Updated Time set to: ${formattedTime}`);
-        stopLoadingAnimation(); // Stop animation when fetch succeeds
-    } else {
-        startLoadingAnimation(); // Start the loading animation
-    }
-}
 
 document.addEventListener('DOMContentLoaded', async function() {
     const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
@@ -303,6 +314,7 @@ function filterNews() {
 }
 
 
+let lastSuccessfulUpdate = null; // To store the last successful update time
 let lastUpdatedAnimationInterval = null; // Store the animation interval
 
 function startLoadingAnimation() {
@@ -322,3 +334,19 @@ function stopLoadingAnimation() {
     lastUpdatedAnimationInterval = null;
 }
 
+function updateLastUpdatedTime(finalTime = true) {
+    const lastUpdatedElement = document.getElementById('last-updated');
+    if (finalTime) {
+        if (lastSuccessfulUpdate) {
+            const formattedTime = lastSuccessfulUpdate.toLocaleTimeString('en-US', { hour12: false });
+            lastUpdatedElement.textContent = `Last Updated: ${formattedTime}`;
+            console.log(`Last Updated Time set to: ${formattedTime}`);
+        } else {
+            lastUpdatedElement.textContent = `Last Updated: None`;
+            console.log('No successful updates yet.');
+        }
+        stopLoadingAnimation(); // Stop animation when fetch completes
+    } else {
+        startLoadingAnimation(); // Start the loading animation
+    }
+}
