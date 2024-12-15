@@ -31,6 +31,7 @@ async function fetchNews(endpoint, newsType) {
     }
 
     try {
+        updateLastUpdatedTime(false); // Start the loading animation
         document.getElementById('loading-gif').style.display = 'block';
         console.log(`Fetching news from ${newsType} (${endpoint})...`);
 
@@ -43,15 +44,7 @@ async function fetchNews(endpoint, newsType) {
             return;
         }
 
-        // Set the text direction based on the endpoint
-        //const newsContainer = document.getElementById('news-container');
-       //if (endpoint === 'bbc' || endpoint === 'nyt') {
-        //    newsContainer.setAttribute('dir', 'ltr');
-       // } else {
-       ///     newsContainer.setAttribute('dir', 'rtl');
-       // }
-
-        // Store news items in the newsData object
+        // Store news items
         newsData[endpoint] = newsItems.map(item => {
             item.newsType = newsType;
             return item;
@@ -60,13 +53,17 @@ async function fetchNews(endpoint, newsType) {
         console.log(`Fetched and stored news from ${newsType}:`, newsData[endpoint]);
 
         displayNewsItems();
-        updateLastUpdatedTime();  // Update the last updated time after displaying news
-        filterNews() 
+        updateLastUpdatedTime(true); // Final time update on success
+        filterNews();
     } catch (error) {
         document.getElementById('loading-gif').style.display = 'none';
-        console.error(`Error fetching news from ${endpoint}:`, error);
+        console.error(`Error fetching news from ${newsType} (${endpoint}):`, error);
+    
+        document.getElementById('last-updated').textContent = `Last Updated: Fetch Failed for ${newsType} (${endpoint})`;
+        stopLoadingAnimation();
     }
 }
+
 
 function toggleSourceSelection(endpoint, newsType) {
     const checkbox = document.getElementById(`${endpoint}-checkbox`);
@@ -222,22 +219,18 @@ function refreshNews(calledByUser=false) {
 
 }
 
-function updateLastUpdatedTime() {
-    const lastUpdatedTime = new Date();
-    const formattedTime = lastUpdatedTime.toLocaleTimeString('en-US', { hour12: false });
-    document.getElementById('last-updated').textContent = `Last Updated: ${formattedTime}`;
-    console.log(`Last Updated Time set to: ${formattedTime}`);
-}
-function adjustFontSize(change) {
-    const newsContainer = document.getElementById('news-container');
-    const currentFontSize = window.getComputedStyle(newsContainer, null).getPropertyValue('font-size');
-    const newFontSize = parseFloat(currentFontSize) + change;
-
-    if (newFontSize >= 12 && newFontSize <= 24) { // Restrict font size between 12px and 24px for good UX
-        newsContainer.style.fontSize = newFontSize + 'px';
+function updateLastUpdatedTime(finalTime = true) {
+    const lastUpdatedElement = document.getElementById('last-updated');
+    if (finalTime) {
+        const lastUpdatedTime = new Date();
+        const formattedTime = lastUpdatedTime.toLocaleTimeString('en-US', { hour12: false });
+        lastUpdatedElement.textContent = `Last Updated: ${formattedTime}`;
+        console.log(`Last Updated Time set to: ${formattedTime}`);
+        stopLoadingAnimation(); // Stop animation when fetch succeeds
+    } else {
+        startLoadingAnimation(); // Start the loading animation
     }
 }
-
 
 document.addEventListener('DOMContentLoaded', async function() {
     const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
@@ -308,3 +301,24 @@ function filterNews() {
         }
     });
 }
+
+
+let lastUpdatedAnimationInterval = null; // Store the animation interval
+
+function startLoadingAnimation() {
+    const lastUpdatedElement = document.getElementById('last-updated');
+    let dots = 0;
+    stopLoadingAnimation(); // Ensure any existing animation stops first
+
+    // Start animation loop (adds 1, 2, or 3 dots)
+    lastUpdatedAnimationInterval = setInterval(() => {
+        dots = (dots % 3) + 1; // Cycle between 1, 2, and 3 dots
+        lastUpdatedElement.textContent = `Last Updated: Fetching${'.'.repeat(dots)}`;
+    }, 500);
+}
+
+function stopLoadingAnimation() {
+    clearInterval(lastUpdatedAnimationInterval);
+    lastUpdatedAnimationInterval = null;
+}
+

@@ -231,10 +231,6 @@ footer.scrolled {
     background-color: #9a67ea;
 }
 
-#last-updated {
-    font-size: 14px;
-    margin: 0;
-}
 
 
 
@@ -346,4 +342,25 @@ footer.scrolled {
 .publisher a:hover {
     color: #ffb74d; /* Slightly lighter orange on hover */
     text-decoration: underline; /* Add underline on hover for clarity */
+}
+
+
+#last-updated {
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+#last-updated.loading {
+    opacity: 0.8;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
 }
