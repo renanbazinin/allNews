@@ -338,6 +338,7 @@ function updateLastUpdatedTime(finalTime = true) {
     const lastUpdatedElement = document.getElementById('last-updated');
     if (finalTime) {
         if (lastSuccessfulUpdate) {
+            lastSuccessfulUpdate = new Date()
             const formattedTime = lastSuccessfulUpdate.toLocaleTimeString('en-US', { hour12: false });
             lastUpdatedElement.textContent = `Last Updated: ${formattedTime}`;
             console.log(`Last Updated Time set to: ${formattedTime}`);
