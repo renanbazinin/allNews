@@ -73,6 +73,16 @@ function toggleSourceSelection(endpoint, newsType) {
     }
 }
 
+function adjustFontSize(change) {
+    const newsContainer = document.getElementById('news-container');
+    const currentFontSize = window.getComputedStyle(newsContainer, null).getPropertyValue('font-size');
+    const newFontSize = parseFloat(currentFontSize) + change;
+
+    if (newFontSize >= 12 && newFontSize <= 24) { // Restrict font size between 12px and 24px for good UX
+        newsContainer.style.fontSize = newFontSize + 'px';
+    }
+}
+
 
 async function fetchSelectedNews(justRefresh = true) {
     const endpoints = [
