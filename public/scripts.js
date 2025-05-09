@@ -5,9 +5,21 @@ let touchStartY = 0;
 let isTouchMoved = false;
 let touchTimeout = null;
 let isDoubleClickDetected = false;
+let currentDisplayMode = 'list'; // Default mode
+let lastSuccessfulUpdate = null;
+let lastUpdatedAnimationInterval = null;
 
-// Store the user's preferred font size in localStorage
-let currentFontSize = localStorage.getItem('newsFontSize') || 16; // Default size
+// Check if localStorage is available before using it
+let currentFontSize = 16; // Default size
+try {
+    const savedFontSize = localStorage ? localStorage.getItem('newsFontSize') : null;
+    if (savedFontSize !== null) {
+        currentFontSize = savedFontSize;
+    }
+} catch (error) {
+    console.error('Error accessing localStorage:', error);
+    // Continue with default font size
+}
 
 function formatMilitaryTime(date) {
     const hours = String(date.getHours()).padStart(2, '0');
@@ -19,7 +31,7 @@ function formatFetchTimestamp(date) {
     return `${date.toLocaleString()}`;
 }
 
-let currentDisplayMode = 'list'; // Default mode
+// Display mode is declared at the top of the file
 
 let newsData = {};  // Object to store news items for each source
 let fetchIntervalId = null;
@@ -93,7 +105,14 @@ function adjustFontSize(change) {
     if (currentFontSize > 24) currentFontSize = 24;
     
     // Save preference
-    localStorage.setItem('newsFontSize', currentFontSize);
+    try {
+        if (localStorage) {
+            localStorage.setItem('newsFontSize', currentFontSize);
+        }
+    } catch (error) {
+        console.error('Error saving font size preference:', error);
+        // Continue without saving preference
+    }
     
     // Apply the font size to the container
     newsContainer.style.fontSize = `${currentFontSize}px`;
@@ -231,6 +250,19 @@ function detectLanguage(text) {
 
 function displayNewsItems() {
     const newsContainer = document.getElementById('news-container');
+    
+    // Save expanded state before wiping content
+    const expandedItems = {};
+    if (currentDisplayMode === 'list') {
+        const currentDescriptions = document.querySelectorAll('.news-description');
+        currentDescriptions.forEach(desc => {
+            if (desc.style.display === 'block') {
+                const index = desc.id.replace('description-', '');
+                expandedItems[index] = true;
+            }
+        });
+    }
+    
     newsContainer.innerHTML = '';
     
     let allNewsItems = [];
@@ -300,9 +332,15 @@ function displayNewsItems() {
             newsItem.classList.add('hebrew-source');
         } else {
             newsItem.classList.add('english-source');
+        }        newsContainer.appendChild(newsItem);
+        
+        // Restore expanded state if this item was expanded before
+        if (currentDisplayMode === 'list' && expandedItems[index]) {
+            const descriptionDiv = document.getElementById(`description-${index}`);
+            if (descriptionDiv) {
+                descriptionDiv.style.display = 'block';
+            }
         }
-
-        newsContainer.appendChild(newsItem);
     });
     
     filterNewsWithoutInput();
@@ -311,30 +349,35 @@ function displayNewsItems() {
 
 function applyStoredFontSize() {
     // If we have a saved font size preference, apply it to the newly displayed items
-    if (localStorage.getItem('newsFontSize')) {
-        currentFontSize = localStorage.getItem('newsFontSize');
-        
-        const newsContainer = document.getElementById('news-container');
-        const newsItems = document.querySelectorAll('.news-item, .news-item-list');
-        const descriptions = document.querySelectorAll('.news-description p');
-        
-        newsContainer.style.fontSize = `${currentFontSize}px`;
-        
-        newsItems.forEach(item => {
-            const heading = item.querySelector('h2');
-            if (heading) {
-                heading.style.fontSize = `${currentFontSize + 2}px`;
-            }
+    try {
+        if (localStorage && localStorage.getItem('newsFontSize')) {
+            currentFontSize = localStorage.getItem('newsFontSize');
             
-            const paragraphs = item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)');
-            paragraphs.forEach(p => {
-                p.style.fontSize = `${currentFontSize}px`;
+            const newsContainer = document.getElementById('news-container');
+            const newsItems = document.querySelectorAll('.news-item, .news-item-list');
+            const descriptions = document.querySelectorAll('.news-description p');
+            
+            newsContainer.style.fontSize = `${currentFontSize}px`;
+            
+            newsItems.forEach(item => {
+                const heading = item.querySelector('h2');
+                if (heading) {
+                    heading.style.fontSize = `${currentFontSize + 2}px`;
+                }
+                
+                const paragraphs = item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)');
+                paragraphs.forEach(p => {
+                    p.style.fontSize = `${currentFontSize}px`;
+                });
             });
-        });
-        
-        descriptions.forEach(desc => {
-            desc.style.fontSize = `${currentFontSize}px`;
-        });
+            
+            descriptions.forEach(desc => {
+                desc.style.fontSize = `${currentFontSize}px`;
+            });
+        }
+    } catch (error) {
+        console.error('Error applying stored font size:', error);
+        // Continue with default font size
     }
 }
 
@@ -386,12 +429,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateLastUpdatedTime();
     refreshNews();
-    
-    // Apply saved font size if exists
-    if (localStorage.getItem('newsFontSize')) {
-        currentFontSize = localStorage.getItem('newsFontSize');
-        const newsContainer = document.getElementById('news-container');
-        newsContainer.style.fontSize = `${currentFontSize}px`;
+      // Apply saved font size if exists
+    try {
+        if (localStorage && localStorage.getItem('newsFontSize')) {
+            currentFontSize = localStorage.getItem('newsFontSize');
+            const newsContainer = document.getElementById('news-container');
+            newsContainer.style.fontSize = `${currentFontSize}px`;
+        }
+    } catch (error) {
+        console.error('Error accessing localStorage in DOMContentLoaded:', error);
+        // Continue with default font size
     }
     
     window.addEventListener('scroll', function() {
@@ -583,8 +630,7 @@ function filterNewsByQuery(query) {
     });
 }
 
-let lastSuccessfulUpdate = null;
-let lastUpdatedAnimationInterval = null;
+// Variables are now declared at the top of the file
 
 function startLoadingAnimation() {
     const lastUpdatedElement = document.getElementById('last-updated');
