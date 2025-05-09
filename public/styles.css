@@ -1,33 +1,80 @@
+:root {
+    --primary-bg: #292929;
+    --secondary-bg: #1e1e1e;
+    --card-bg: #2a2a2a;
+    --text-color: #e0e0e0;
+    --accent-color: #21a1f1;
+    --accent-color-hover: #0d8ad8;
+    --link-color: #61dafb;
+    --border-color: #444;
+    --button-bg: #bb86fc;
+    --button-bg-hover: #9a67ea;
+    --refresh-button-bg: #00bcd4;
+    --refresh-button-bg-hover: #0097a7;
+    --font-size-adjust-button-bg: #ff9800;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
 body {
-    background-color: #292929; /* Softer dark gray */
-    color: #dcdcdc; /* Light gray for better contrast */
-    font-family: Arial, sans-serif;
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     margin: 0;
     padding: 0;
+    overscroll-behavior: contain; /* Prevent pull-to-refresh */
+    overflow-x: hidden;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+/* Header styles */
+header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--primary-bg);
+    padding: 12px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 h1 {
     text-align: center;
-    padding: 20px;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+/* Source buttons container */
+#sources-nav {
+    position: sticky;
+    top: 50px;
+    z-index: 90;
+    background-color: var(--primary-bg);
+    padding: 5px 0;
 }
 
 #buttons-container {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center; /* Center the content */
-    gap: 20px; /* Increased spacing between buttons */
-    margin-bottom: 20px;
-    padding: 10px;
-    border-radius: 10px;
-    border: 4px solid transparent;
-    background-clip: padding-box;
-    border-image: linear-gradient(45deg, #444444, #888888) 1;
-    direction: ltr; /* Ensure the direction is fixed to LTR */
-    max-width: 600px; /* Set a max-width to control the container's width */
-    margin-left: auto; /* Center the container */
-    margin-right: auto; /* Center the container */
+    justify-content: center;
+    gap: 10px;
+    margin: 0 auto 12px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: var(--secondary-bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
-
 
 #buttons-container label {
     cursor: pointer;
@@ -35,320 +82,168 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 5px;
-    transition: border 0.3s ease, box-shadow 0.3s ease;
-    flex-basis: calc(20% - 20px); /* Flex basis to ensure 5 items per row */
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    width: 46px;
+    height: 46px;
+    background-color: rgba(30, 30, 30, 0.7);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    -webkit-touch-callout: none;
+    user-select: none;
 }
+
 #buttons-container input[type="checkbox"] {
-    display: none; /* Hide the checkbox */
+    display: none;
 }
 
 #buttons-container img {
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
+    border-radius: 4px;
+}
+
+#buttons-container label:active {
+    transform: scale(0.95);
 }
 
 #buttons-container label:hover img {
-    transform: scale(1.1); /* Slightly enlarge the image on hover */
+    transform: scale(1.05);
 }
 
-#buttons-container input[type="checkbox"]:checked + img,
-#buttons-container img.selected {
-    border: 2px solid #21a1f1; /* Highlight active source */
-    border-radius: 5px;
-    box-shadow: 0 0 10px #9a67ea; /* Add a glow effect */
+#buttons-container label:active img {
+    transform: scale(0.9);
+    opacity: 0.8;
 }
 
-
-
-#news-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    direction: rtl; 
+#buttons-container input[type="checkbox"]:checked + img {
+    border: 2px solid var(--accent-color);
+    border-radius: 4px;
+    box-shadow: 0 0 8px var(--button-bg);
 }
 
-.news-item {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 20px;
-    padding: 20px;
-    border-radius: 10px;
-    background-color: #2a2a2a; /* Dark gray for better contrast */
-    color: #eaeaea; /* Slightly brighter text */
-
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+/* App controls section */
+.app-controls {
+    padding: 0 10px;
+    margin-bottom: 12px;
 }
 
-.news-item h2 {
-    margin-top: 0;
-}
-
-.news-item img {
-    width: 150px;
-    height: 150px;
-    border-radius: 12px;
-    object-fit: cover;
-}
-
-.news-item a,
-footer a {
-    color: #61dafb; /* Bright blue for links */
-    text-decoration: none;
-}
-
-.news-item a:hover,
-footer a:hover {
-    color: #21a1f1; /* Slightly darker blue on hover */
-    text-decoration: underline;
-}
-
-.fetch-timestamp {
-    font-size: 0.8em;
-    color: #aaaaaa;
-    margin-top: 10px;
-}
-
-#loading-gif {
-    display: block;
-    margin: 20px auto;
-}
-
-footer {
-    background-color: rgba(30, 30, 30, 0.5); /* 50% transparency */
-    color: #fff;
-    text-align: center;
-    padding: 5px 0;
-    position: fixed;
-    width: 100%;
-    bottom: 0;
-    transition: all 0.3s ease;
-}
-
-footer p {
-    margin: 0;
-    font-size: 0.8em;
-}
-
-footer a {
-    color: #bb86fc;
-    text-decoration: none;
-}
-
-footer a:hover {
-    text-decoration: underline;
-}
-
-footer.scrolled {
-    text-align: left;
-    padding: 5px 10px;
-    font-size: 0.7em;
-}
-
-#scroll-to-top {
-    position: fixed;
-    bottom: 50px;
-    right: 30px;
-    background-color: rgba(70, 130, 180, 0.8); /* SteelBlue with 80% transparency */
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    padding: 10px; /* Larger padding */
-    cursor: pointer;
-    display: none;
-    font-size: 26px; /* Larger font size */
-    transition: all 0.3s ease;
-}
-
-#scroll-to-top:hover {
-    background-color: rgba(70, 130, 180, 0.95); /* SteelBlue with 95% transparency */
-}
-
-.share-news {
-    position: absolute;
-    bottom: 10px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #bb86fc;
-    text-decoration: underline;
-    font-size: 0.2em; /* Make the text smaller */
-    padding: 0;
-}
-.share-news img {
-    width: 11px; /* Adjust the width to make the image smaller */
-    height: auto; /* Maintain the aspect ratio */
-}
-
-.share-news-left {
-    left: 10px;
-}
-
-.share-news-right {
-    right: 10px;
-}
-
-.share-news:hover {
-    color: #9a67ea;
-}
-
-.copied-message {
-    display: block;
-    color: #bb86fc;
-    font-size: 0.7em; /* Make the text smaller */
-    margin-top: 5px;
-    margin-right: auto; /* Align to the left */
-}
-
-#refresh-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 20px 0;
-    padding: 10px;
-    border-radius: 10px;
-    background-color: #1e1e1e;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    color: #e0e0e0;
-}
-
-#refresh-button {
-    background-color: #bb86fc;
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-#refresh-button:hover {
-    background-color: #9a67ea;
-}
-
-
-
-
-#mode-switcher {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-#mode-switcher button {
-    background-color: #00bcd4; /* Change color to green */
-    border: none;
-    color: white;
-    padding: 8px 15px; /* Smaller padding for smaller buttons */
-    margin: 0 8px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px; /* Smaller font size */
-    transition: background-color 0.3s ease, transform 0.2s;
-}
-
-#mode-switcher button:hover {
-    background-color: #0097a7 ; /* Darker green on hover */
-    transform: scale(1.05); /* Slightly enlarge on hover */
-}
-
-#increase-font, #decrease-font {
-    background-color: #ff9800; /* Orange color for A+ and A- */
-    padding: 8px 10px;
-    margin: 0 5px;
-    font-size: 16px;
-    width: 40px; /* Smaller width */
-    border-radius: 5px;
-}
-
-
-.news-item-list {
-    background-color: transparent;
-    color: #e0e0e0;
-    padding: 10px;
-    border-bottom: 1px solid #444;
-    transition: background-color 0.3s ease;
-}
-
-.news-item-list.clickable {
-    cursor: pointer;
-}
-
-
-.news-item-list.clickable:hover {
-    background-color: #2a2a2a;
-}
-
-
-.news-item-list p {
-    margin: 5px 0;
-}
-
-.news-item-list .publisher {
-    font-size: 0.9em;
-    color: #888;
-}
-
-
-.news-description {
-    margin-top: 10px;
-    padding: 10px;
-    border-top: 1px solid #444;
-    background-color: #1e1e1e;
-    display: none; /* Initially hidden */
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-}
-
-.news-description p {
-    margin: 0;
-    color: #bbbbbb;
-}
-
+/* Search bar */
 #search-container {
     display: flex;
     justify-content: center;
     margin: 10px 0;
-    text-align: center;
 }
 
 #search-bar {
-    width: auto;
-    direction: rtl;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #444;
-    background-color: #1e1e1e;
-    color: #e0e0e0;
+    width: 100%;
+    max-width: 90vw;
+    padding: 12px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
     font-size: 16px;
     outline: none;
-    transition: border 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 #search-bar:focus {
-    border-color: #00bcd4; /* Match the color scheme */
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(33, 161, 241, 0.2);
 }
 
-
-.publisher a {
-    color: #ff9800; /* Bright orange for good visibility */
-    text-decoration: none; /* Remove underline */
+/* Display mode switcher */
+#mode-switcher {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 15px 0;
 }
 
-.publisher a:hover {
-    color: #ffb74d; /* Slightly lighter orange on hover */
-    text-decoration: underline; /* Add underline on hover for clarity */
+#mode-switcher button {
+    background-color: var(--refresh-button-bg);
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
+#mode-switcher button:active {
+    transform: scale(0.95);
+}
+
+#mode-switcher button:hover {
+    background-color: var(--refresh-button-bg-hover);
+}
+
+#mode-switcher button.active {
+    background-color: var(--accent-color);
+}
+
+#increase-font, #decrease-font {
+    background-color: var(--font-size-adjust-button-bg) !important;
+    width: 40px;
+    height: 40px;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% !important;
+    font-weight: bold;
+}
+
+/* Refresh section */
+#refresh-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 10px;
+    background-color: var(--secondary-bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+#refresh-button {
+    background-color: var(--button-bg);
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.refresh-icon {
+    font-size: 18px;
+}
+
+#refresh-button:active {
+    transform: scale(0.95);
+}
+
+#refresh-button:hover {
+    background-color: var(--button-bg-hover);
+}
 
 #last-updated {
     font-size: 14px;
-    font-weight: bold;
-    transition: all 0.3s ease;
+    color: #aaa;
+    margin: 0;
 }
 
 #last-updated.loading {
@@ -357,10 +252,426 @@ footer.scrolled {
 }
 
 @keyframes pulse {
-    0%, 100% {
-        opacity: 0.8;
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* Loading animation */
+#loading-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+#loading-gif {
+    width: 40px;
+    height: 40px;
+}
+
+/* News container */
+#news-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 10px 15px 70px; /* Extra padding at bottom to avoid footer overlap */
+    direction: initial; /* Allows individual items to control their direction */
+}
+
+/* News items in list mode */
+.news-item-list {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: background-color 0.2s ease;
+}
+
+.news-item-list.clickable {
+    cursor: pointer;
+    position: relative;
+    min-height: 50px; /* Ensure good touch target size */
+    padding-right: 30px; /* Space for the arrow indicator */
+}
+
+.news-item-list.clickable::after {
+    content: "▼";
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #888;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(0,0,0,0.1);
+}
+
+.news-item-list p {
+    margin: 5px 0;
+    line-height: 1.4;
+    font-size: 15px;
+}
+
+.news-item-list p strong,
+.news-time {
+    color: #ffcc00;
+    font-weight: 600;
+    font-family: monospace;
+    padding: 0 2px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin-right: 3px;
+}
+
+.news-item-list .publisher {
+    font-size: 13px;
+    color: #888;
+}
+
+/* News items in card mode */
+.news-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 12px;
+    background-color: var(--card-bg);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.news-item h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.news-item img {
+    width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin: 10px 0;
+}
+
+.news-description {
+    margin-top: 8px;
+    padding: 10px;
+    border-top: 1px solid var(--border-color);
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.news-description p {
+    margin: 0;
+    color: #bbb;
+    line-height: 1.4;
+}
+
+/* Links */
+.news-item a,
+.publisher a,
+footer a {
+    color: var(--link-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.news-item a:hover,
+.publisher a:hover,
+footer a:hover {
+    color: var(--accent-color);
+}
+
+.publisher a {
+    color: #ff9800;
+    font-weight: 500;
+}
+
+/* Footer */
+footer {
+    background-color: rgba(20, 20, 20, 0.9);
+    color: #fff;
+    text-align: center;
+    padding: 10px 0;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    z-index: 50;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+}
+
+footer p {
+    margin: 0;
+}
+
+footer.scrolled {
+    padding: 5px;
+    font-size: 10px;
+}
+
+/* Scroll to top button */
+#scroll-to-top {
+    position: fixed;
+    bottom: 50px;
+    right: 20px;
+    background-color: var(--button-bg);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    cursor: pointer;
+    z-index: 40;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+#scroll-to-top:active {
+    transform: scale(0.95);
+}
+
+#scroll-to-top:hover {
+    background-color: var(--button-bg-hover);
+}
+
+/* Error messages */
+#error-container {
+    background-color: rgba(255, 0, 0, 0.1);
+    border-left: 3px solid #ff3333;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* Media queries for different device sizes */
+@media (max-width: 480px) {
+    #buttons-container {
+        gap: 8px;
     }
-    50% {
-        opacity: 1;
+    
+    #buttons-container label {
+        width: 46px;
+        height: 46px;
     }
+    
+    #buttons-container img {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .news-item h2 {
+        font-size: 16px;
+    }
+    
+    .news-item-list p {
+        font-size: 14px;
+    }
+    
+    #refresh-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    a, button, .clickable {
+        padding: 8px;
+        margin: 2px 0;
+    }
+    
+    .news-item:active,
+    .news-item-list:active {
+        background-color: rgba(255,255,255,0.05);
+    }
+    
+    /* Make touch targets larger */
+    .news-item-list.clickable {
+        padding: 12px 38px 12px 15px;
+    }
+    
+    /* Improve time visibility on small screens */
+    .news-item-list p strong {
+        display: inline-block;
+        min-width: 45px;
+    }
+    
+    /* Better checkbox touch behavior */
+    #buttons-container label {
+        transition: transform 0.15s ease, background-color 0.2s ease;
+    }
+    
+    #buttons-container label:active {
+        background-color: rgba(99, 99, 99, 0.3);
+        transform: scale(0.92);
+    }
+}
+
+/* Dark mode media query - make sure the app looks good in dark mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-bg: #121212;
+        --secondary-bg: #1a1a1a;
+        --card-bg: #222222;
+    }
+}
+
+/* Add to home screen install prompt styles */
+#install-prompt {
+    position: fixed;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg);
+    padding: 15px;
+    border-radius: 12px;
+    margin: 0 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 100;
+}
+
+#install-prompt p {
+    margin: 0 0 10px;
+}
+
+#install-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#install-actions button {
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#install-now {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+#install-later {
+    background-color: transparent;
+    color: #888;
+}
+
+/* Pull to refresh animation */
+.ptr--ptr {
+    box-shadow: 0 0.125em 0.125em rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    font-size: 0.85em;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    color: var(--accent-color);
+    transform: translateY(-100%);
+    z-index: 100;
+}
+
+/* Touch feedback effect */
+.touch-feedback {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(255,255,255,0.3);
+    transform: scale(0);
+    animation: touch-ripple 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes touch-ripple {
+    to {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+/* Loading state styles */
+.loading-state {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Skeleton loaders for news items */
+.skeleton-loader {
+    background: linear-gradient(90deg, var(--card-bg) 0%, #3a3a3a 50%, var(--card-bg) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 8px;
+    height: 100px;
+    margin-bottom: 10px;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: -100% 0; }
+    100% { background-position: 100% 0; }
+}
+
+/* RTL/LTR language support */
+.hebrew-source {
+    text-align: right;
+}
+
+.english-source {
+    text-align: left;
+}
+
+/* Style for RTL paragraphs */
+[dir="rtl"] {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Hebrew', 'Arial Hebrew', Arial, sans-serif;
+    line-height: 1.5;
+}
+
+/* Add touch feedback to all interactive elements */
+button, a, .clickable {
+    touch-action: manipulation; /* Prevents delay on tap */
+}
+
+/* Source Selection Styles */
+.source-selected {
+    box-shadow: 0 0 0 2px var(--accent-color);
+    animation: pulse-border 1.5s infinite;
+}
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 2px rgba(33, 161, 241, 1); }
+    50% { box-shadow: 0 0 0 4px rgba(33, 161, 241, 0.5); }
+    100% { box-shadow: 0 0 0 2px rgba(33, 161, 241, 1); }
+}
+
+/* Language-specific typography improvements */
+.hebrew-source h2,
+.hebrew-source p {
+    letter-spacing: -0.01em; /* Slightly tighten Hebrew text */
+}
+
+.english-source h2,
+.english-source p {
+    letter-spacing: 0.01em; /* Slightly loosen English text */
+}
+
+/* Double-tap highlight effect */
+@keyframes highlight-source {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.highlight-selection {
+    animation: highlight-source 0.3s ease;
 }
