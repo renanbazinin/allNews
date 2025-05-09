@@ -9,17 +9,8 @@ let currentDisplayMode = 'list'; // Default mode
 let lastSuccessfulUpdate = null;
 let lastUpdatedAnimationInterval = null;
 
-// Check if localStorage is available before using it
+// Default font size, no longer stored in localStorage
 let currentFontSize = 16; // Default size
-try {
-    const savedFontSize = localStorage ? localStorage.getItem('newsFontSize') : null;
-    if (savedFontSize !== null) {
-        currentFontSize = savedFontSize;
-    }
-} catch (error) {
-    console.error('Error accessing localStorage:', error);
-    // Continue with default font size
-}
 
 function formatMilitaryTime(date) {
     const hours = String(date.getHours()).padStart(2, '0');
@@ -103,16 +94,6 @@ function adjustFontSize(change) {
     // Enforce min/max boundaries for readability
     if (currentFontSize < 12) currentFontSize = 12;
     if (currentFontSize > 24) currentFontSize = 24;
-    
-    // Save preference
-    try {
-        if (localStorage) {
-            localStorage.setItem('newsFontSize', currentFontSize);
-        }
-    } catch (error) {
-        console.error('Error saving font size preference:', error);
-        // Continue without saving preference
-    }
     
     // Apply the font size to the container
     newsContainer.style.fontSize = `${currentFontSize}px`;
@@ -350,31 +331,27 @@ function displayNewsItems() {
 function applyStoredFontSize() {
     // If we have a saved font size preference, apply it to the newly displayed items
     try {
-        if (localStorage && localStorage.getItem('newsFontSize')) {
-            currentFontSize = localStorage.getItem('newsFontSize');
+        const newsContainer = document.getElementById('news-container');
+        const newsItems = document.querySelectorAll('.news-item, .news-item-list');
+        const descriptions = document.querySelectorAll('.news-description p');
+        
+        newsContainer.style.fontSize = `${currentFontSize}px`;
+        
+        newsItems.forEach(item => {
+            const heading = item.querySelector('h2');
+            if (heading) {
+                heading.style.fontSize = `${currentFontSize + 2}px`;
+            }
             
-            const newsContainer = document.getElementById('news-container');
-            const newsItems = document.querySelectorAll('.news-item, .news-item-list');
-            const descriptions = document.querySelectorAll('.news-description p');
-            
-            newsContainer.style.fontSize = `${currentFontSize}px`;
-            
-            newsItems.forEach(item => {
-                const heading = item.querySelector('h2');
-                if (heading) {
-                    heading.style.fontSize = `${currentFontSize + 2}px`;
-                }
-                
-                const paragraphs = item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)');
-                paragraphs.forEach(p => {
-                    p.style.fontSize = `${currentFontSize}px`;
-                });
+            const paragraphs = item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)');
+            paragraphs.forEach(p => {
+                p.style.fontSize = `${currentFontSize}px`;
             });
-            
-            descriptions.forEach(desc => {
-                desc.style.fontSize = `${currentFontSize}px`;
-            });
-        }
+        });
+        
+        descriptions.forEach(desc => {
+            desc.style.fontSize = `${currentFontSize}px`;
+        });
     } catch (error) {
         console.error('Error applying stored font size:', error);
         // Continue with default font size
@@ -431,11 +408,8 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshNews();
       // Apply saved font size if exists
     try {
-        if (localStorage && localStorage.getItem('newsFontSize')) {
-            currentFontSize = localStorage.getItem('newsFontSize');
-            const newsContainer = document.getElementById('news-container');
-            newsContainer.style.fontSize = `${currentFontSize}px`;
-        }
+        const newsContainer = document.getElementById('news-container');
+        newsContainer.style.fontSize = `${currentFontSize}px`;
     } catch (error) {
         console.error('Error accessing localStorage in DOMContentLoaded:', error);
         // Continue with default font size
