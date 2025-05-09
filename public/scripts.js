@@ -471,29 +471,31 @@ function setupCheckboxHandlers() {
         // Get the checkbox from the cloned label
         const newCheckbox = newLabel.querySelector('input[type="checkbox"]');
 
+        // --- State variables per label instance ---
+        let lastTapTime = 0; // For mobile double-tap detection
+        let currentTouchStartX = 0; // Renamed to avoid conflict if global was still there
+        let currentTouchStartY = 0; // Renamed
+        let currentIsTouchMoved = false; // Renamed
+        let tapTimer = null; // Timer for mobile single tap
+        let isDoubleTapActioned = false; // Mobile: true if double tap was handled by touchstart
+
+        let isDesktopDoubleClickDetected = false; // For desktop double-click detection
+        // --- End State variables ---
+
         // MOBILE TOUCH HANDLING
         if ('ontouchstart' in window) {
-            // Track first tap for double-tap detection
-            let tappedOnce = false;
-            let tapTimer = null;
-            
-            // Touch start handler for mobile devices
             newLabel.addEventListener('touchstart', function(event) {
-                // Mark the touch position to detect if user is scrolling
-                isTouchMoved = false;
-                touchStartX = event.touches[0].clientX;
-                touchStartY = event.touches[0].clientY;
+                currentIsTouchMoved = false;
+                currentTouchStartX = event.touches[0].clientX;
+                currentTouchStartY = event.touches[0].clientY;
                 
                 const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
+                const tapLength = currentTime - lastTapTime;
                 
-                // Double tap detection
-                if (tapLength < doubleTapDelay && tapLength > 0) {
-                    // This is a double tap - clear any pending single tap
+                if (tapLength < doubleTapDelay && tapLength > 0) { // Double tap
                     event.preventDefault();
-                    clearTimeout(tapTimer);
-                    lastTap = 0;
-                    tappedOnce = false;
+                    clearTimeout(tapTimer); // Clear pending single tap from the first tap
+                    isDoubleTapActioned = true; 
                     
                     // Visual feedback for double tap
                     newLabel.classList.add('highlight-selection');
@@ -501,43 +503,40 @@ function setupCheckboxHandlers() {
                         newLabel.classList.remove('highlight-selection');
                     }, 300);
                     
-                    // Apply double-tap action (select only this source)
                     selectOnlyThisSource(sourceId, sourceName);
-                } else {
-                    // This is potentially a first tap of a double tap
-                    // or a single tap - store timestamp for detection
-                    lastTap = currentTime;
+                    lastTapTime = 0; // Reset lastTapTime to prevent immediate re-trigger with a third tap
+                } else { // Potentially first tap or single tap
+                    lastTapTime = currentTime;
+                    isDoubleTapActioned = false; // Reset for a new tap sequence
                 }
             });
             
-            // Track if touch moves to prevent triggering tap when scrolling
             newLabel.addEventListener('touchmove', function(event) {
-                const xDiff = Math.abs(event.touches[0].clientX - touchStartX);
-                const yDiff = Math.abs(event.touches[0].clientY - touchStartY);
+                const xDiff = Math.abs(event.touches[0].clientX - currentTouchStartX);
+                const yDiff = Math.abs(event.touches[0].clientY - currentTouchStartY);
                 
-                // If moved more than 10px in any direction, consider it a scroll
                 if (xDiff > 10 || yDiff > 10) {
-                    isTouchMoved = true;
+                    currentIsTouchMoved = true;
                 }
             });
             
-            // Handle touch end to trigger the single tap action if not scrolling
             newLabel.addEventListener('touchend', function(event) {
-                if (!isTouchMoved) {
-                    // This looks like a deliberate tap (not a scroll)
-                    // Wait a short period to see if it's part of a double tap
-                    clearTimeout(tapTimer);
+                if (!currentIsTouchMoved) {
+                    clearTimeout(tapTimer); 
                     
-                    tapTimer = setTimeout(() => {
-                        // If we get here, it was a single tap
-                        const currentTime = new Date().getTime();
-                        if (currentTime - lastTap >= doubleTapDelay) {
-                            // Toggle checkbox state
+                    if (isDoubleTapActioned) {
+                        // Double tap was handled by touchstart, reset flag for next interaction sequence
+                        isDoubleTapActioned = false; 
+                    } else {
+                        // This is a potential single tap.
+                        // Set a timer. If a second 'touchstart' (completing a double tap)
+                        // occurs before this timer fires, that 'touchstart' will clear this timer.
+                        // If this timer fires, it's a confirmed single tap.
+                        tapTimer = setTimeout(() => {
                             newCheckbox.checked = !newCheckbox.checked;
-                            // Update selection after toggle
                             toggleSourceSelection(sourceId, sourceName);
-                        }
-                    }, doubleTapDelay);
+                        }, doubleTapDelay);
+                    }
                 }
             });
             
@@ -550,10 +549,9 @@ function setupCheckboxHandlers() {
         // DESKTOP MOUSE HANDLING
         // Use separate click and dblclick handlers for desktop
         if (!('ontouchstart' in window) || window.navigator.maxTouchPoints === 0) {
-            // Handle double-click
             newLabel.addEventListener('dblclick', function(event) {
                 event.preventDefault();
-                isDoubleClickDetected = true;
+                isDesktopDoubleClickDetected = true;
                 
                 // Visual feedback
                 newLabel.classList.add('highlight-selection');
@@ -561,30 +559,23 @@ function setupCheckboxHandlers() {
                     newLabel.classList.remove('highlight-selection');
                 }, 300);
                 
-                // Select only this source
                 selectOnlyThisSource(sourceId, sourceName);
                 
-                // Reset after a short delay
+                // Reset after a short delay, allowing click handler to see the flag
                 setTimeout(() => {
-                    isDoubleClickDetected = false;
-                }, 300);
+                    isDesktopDoubleClickDetected = false;
+                }, 250); // Slightly more than click's timeout
             });
             
-            // Handle single click
             newLabel.addEventListener('click', function(event) {
-                // Prevent the default checkbox behavior so we can control it
                 event.preventDefault();
                 
-                // Wait a bit to see if this is part of a double-click
                 setTimeout(() => {
-                    if (!isDoubleClickDetected) {
-                        // Toggle the checkbox manually
+                    if (!isDesktopDoubleClickDetected) {
                         newCheckbox.checked = !newCheckbox.checked;
-                        
-                        // Handle the source selection based on new state
                         toggleSourceSelection(sourceId, sourceName);
                     }
-                }, 200); // Slightly less than typical double-click time
+                }, 200); 
             });
         }
     });
