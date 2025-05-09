@@ -6,6 +6,9 @@ let isTouchMoved = false;
 let touchTimeout = null;
 let isDoubleClickDetected = false;
 
+// Store the user's preferred font size in localStorage
+let currentFontSize = localStorage.getItem('newsFontSize') || 16; // Default size
+
 function formatMilitaryTime(date) {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -77,13 +80,77 @@ function toggleSourceSelection(endpoint, newsType) {
 }
 
 function adjustFontSize(change) {
+    // Get all elements whose font size we want to adjust
     const newsContainer = document.getElementById('news-container');
-    const currentFontSize = window.getComputedStyle(newsContainer, null).getPropertyValue('font-size');
-    const newFontSize = parseFloat(currentFontSize) + change;
+    const newsItems = document.querySelectorAll('.news-item, .news-item-list');
+    const descriptions = document.querySelectorAll('.news-description p');
+    
+    // Update the current font size
+    currentFontSize = parseInt(currentFontSize) + change;
+    
+    // Enforce min/max boundaries for readability
+    if (currentFontSize < 12) currentFontSize = 12;
+    if (currentFontSize > 24) currentFontSize = 24;
+    
+    // Save preference
+    localStorage.setItem('newsFontSize', currentFontSize);
+    
+    // Apply the font size to the container
+    newsContainer.style.fontSize = `${currentFontSize}px`;
+    
+    // Apply specific font size adjustments to different elements
+    newsItems.forEach(item => {
+        // Scale headings proportionally
+        const heading = item.querySelector('h2');
+        if (heading) {
+            heading.style.fontSize = `${currentFontSize + 2}px`;
+        }
+        
+        // Set paragraph sizes directly
+        const paragraphs = item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)');
+        paragraphs.forEach(p => {
+            p.style.fontSize = `${currentFontSize}px`;
+        });
+    });
+    
+    // Apply specific size to descriptions which may have different styling
+    descriptions.forEach(desc => {
+        desc.style.fontSize = `${currentFontSize}px`;
+    });
+    
+    // Show visual feedback that the font size changed
+    showFontSizeFeedback();
+}
 
-    if (newFontSize >= 12 && newFontSize <= 24) { // Restrict font size between 12px and 24px for good UX
-        newsContainer.style.fontSize = newFontSize + 'px';
+function showFontSizeFeedback() {
+    // Create or get the feedback element
+    let feedbackEl = document.getElementById('font-size-feedback');
+    
+    if (!feedbackEl) {
+        feedbackEl = document.createElement('div');
+        feedbackEl.id = 'font-size-feedback';
+        feedbackEl.style.position = 'fixed';
+        feedbackEl.style.bottom = '120px';
+        feedbackEl.style.left = '50%';
+        feedbackEl.style.transform = 'translateX(-50%)';
+        feedbackEl.style.background = 'rgba(0,0,0,0.7)';
+        feedbackEl.style.color = 'white';
+        feedbackEl.style.padding = '10px 20px';
+        feedbackEl.style.borderRadius = '20px';
+        feedbackEl.style.zIndex = '1000';
+        feedbackEl.style.transition = 'opacity 0.3s ease';
+        document.body.appendChild(feedbackEl);
     }
+    
+    // Display current font size
+    feedbackEl.textContent = `Font size: ${currentFontSize}px`;
+    feedbackEl.style.opacity = '1';
+    
+    // Hide after a delay
+    clearTimeout(window.fontSizeFeedbackTimeout);
+    window.fontSizeFeedbackTimeout = setTimeout(() => {
+        feedbackEl.style.opacity = '0';
+    }, 1500);
 }
 
 async function fetchSelectedNews(justRefresh = true) {
@@ -239,6 +306,36 @@ function displayNewsItems() {
     });
     
     filterNewsWithoutInput();
+    applyStoredFontSize();
+}
+
+function applyStoredFontSize() {
+    // If we have a saved font size preference, apply it to the newly displayed items
+    if (localStorage.getItem('newsFontSize')) {
+        currentFontSize = localStorage.getItem('newsFontSize');
+        
+        const newsContainer = document.getElementById('news-container');
+        const newsItems = document.querySelectorAll('.news-item, .news-item-list');
+        const descriptions = document.querySelectorAll('.news-description p');
+        
+        newsContainer.style.fontSize = `${currentFontSize}px`;
+        
+        newsItems.forEach(item => {
+            const heading = item.querySelector('h2');
+            if (heading) {
+                heading.style.fontSize = `${currentFontSize + 2}px`;
+            }
+            
+            const paragraphs = item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)');
+            paragraphs.forEach(p => {
+                p.style.fontSize = `${currentFontSize}px`;
+            });
+        });
+        
+        descriptions.forEach(desc => {
+            desc.style.fontSize = `${currentFontSize}px`;
+        });
+    }
 }
 
 function toggleDescription(index) {
@@ -290,6 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
     updateLastUpdatedTime();
     refreshNews();
     
+    // Apply saved font size if exists
+    if (localStorage.getItem('newsFontSize')) {
+        currentFontSize = localStorage.getItem('newsFontSize');
+        const newsContainer = document.getElementById('news-container');
+        newsContainer.style.fontSize = `${currentFontSize}px`;
+    }
+    
     window.addEventListener('scroll', function() {
         const scrollToTopButton = document.getElementById('scroll-to-top');
         const footer = document.querySelector('footer');
@@ -322,8 +426,13 @@ function setupCheckboxHandlers() {
 
         // MOBILE TOUCH HANDLING
         if ('ontouchstart' in window) {
-            // Touch start - record position
+            // Track first tap for double-tap detection
+            let tappedOnce = false;
+            let tapTimer = null;
+            
+            // Touch start handler for mobile devices
             newLabel.addEventListener('touchstart', function(event) {
+                // Mark the touch position to detect if user is scrolling
                 isTouchMoved = false;
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
@@ -331,55 +440,64 @@ function setupCheckboxHandlers() {
                 const currentTime = new Date().getTime();
                 const tapLength = currentTime - lastTap;
                 
-                // Clear any existing timeout
-                clearTimeout(touchTimeout);
-                
+                // Double tap detection
                 if (tapLength < doubleTapDelay && tapLength > 0) {
-                    // Double tap detected
+                    // This is a double tap - clear any pending single tap
                     event.preventDefault();
+                    clearTimeout(tapTimer);
                     lastTap = 0;
+                    tappedOnce = false;
                     
-                    // Visual feedback
+                    // Visual feedback for double tap
                     newLabel.classList.add('highlight-selection');
                     setTimeout(() => {
                         newLabel.classList.remove('highlight-selection');
                     }, 300);
                     
-                    // Select only this source
+                    // Apply double-tap action (select only this source)
                     selectOnlyThisSource(sourceId, sourceName);
                 } else {
-                    // Single tap - wait to see if it's part of a double-tap
+                    // This is potentially a first tap of a double tap
+                    // or a single tap - store timestamp for detection
                     lastTap = currentTime;
-                    
-                    // Set a timeout to handle the tap if a second one doesn't come
-                    touchTimeout = setTimeout(() => {
-                        if (!isTouchMoved) {
-                            // Toggle the checkbox state
-                            newCheckbox.checked = !newCheckbox.checked;
-                            
-                            // Handle the source selection based on new state
-                            toggleSourceSelection(sourceId, sourceName);
-                        }
-                    }, doubleTapDelay);
                 }
-            }, { passive: false });
+            });
             
-            // Track if touch moves significantly (to prevent triggering when scrolling)
+            // Track if touch moves to prevent triggering tap when scrolling
             newLabel.addEventListener('touchmove', function(event) {
                 const xDiff = Math.abs(event.touches[0].clientX - touchStartX);
                 const yDiff = Math.abs(event.touches[0].clientY - touchStartY);
                 
-                // If moved more than 10px in any direction, consider it a scroll, not a tap
+                // If moved more than 10px in any direction, consider it a scroll
                 if (xDiff > 10 || yDiff > 10) {
                     isTouchMoved = true;
-                    clearTimeout(touchTimeout);
                 }
-            }, { passive: true });
+            });
             
-            // Cancel the tap handler if touch is cancelled
-            newLabel.addEventListener('touchcancel', function() {
-                clearTimeout(touchTimeout);
-            }, { passive: true });
+            // Handle touch end to trigger the single tap action if not scrolling
+            newLabel.addEventListener('touchend', function(event) {
+                if (!isTouchMoved) {
+                    // This looks like a deliberate tap (not a scroll)
+                    // Wait a short period to see if it's part of a double tap
+                    clearTimeout(tapTimer);
+                    
+                    tapTimer = setTimeout(() => {
+                        // If we get here, it was a single tap
+                        const currentTime = new Date().getTime();
+                        if (currentTime - lastTap >= doubleTapDelay) {
+                            // Toggle checkbox state
+                            newCheckbox.checked = !newCheckbox.checked;
+                            // Update selection after toggle
+                            toggleSourceSelection(sourceId, sourceName);
+                        }
+                    }, doubleTapDelay);
+                }
+            });
+            
+            // Prevent default checkbox behavior as we're handling it ourselves
+            newCheckbox.addEventListener('click', function(event) {
+                event.preventDefault();
+            });
         }
         
         // DESKTOP MOUSE HANDLING
@@ -405,7 +523,7 @@ function setupCheckboxHandlers() {
                 }, 300);
             });
             
-            // Handle single click (will not fire if double-click was detected)
+            // Handle single click
             newLabel.addEventListener('click', function(event) {
                 // Prevent the default checkbox behavior so we can control it
                 event.preventDefault();
