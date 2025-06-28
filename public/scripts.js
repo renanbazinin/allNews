@@ -46,7 +46,7 @@ async function fetchNews(endpoint, newsType) {
         updateLastUpdatedTime(false); // Start the loading animation
         document.getElementById('loading-gif').style.display = 'block';
 
-        const response = await fetch(`https://all-news.glitch.me/${endpoint}`);
+        const response = await fetch(`https://allnews-server.onrender.com/${endpoint}`);
         const newsItems = await response.json();
         document.getElementById('loading-gif').style.display = 'none';
 
@@ -154,6 +154,11 @@ function showFontSizeFeedback() {
 }
 
 async function fetchSelectedNews(justRefresh = true) {
+    // Start the refresh spinner
+    if (typeof startRefreshSpinner === 'function') {
+        startRefreshSpinner();
+    }
+    
     const endpoints = [
         'bbc', 'nyt', 'ynet', 'maariv', 'n12', 'rotter', 'walla', 'calcalist', 'haaretz'
     ];
@@ -185,6 +190,11 @@ async function fetchSelectedNews(justRefresh = true) {
 
     updateLastUpdatedTime(allFetchSucceeded); // Pass success state to determine display
     filterNews();
+
+    // Stop the refresh spinner when all fetching is complete
+    if (typeof stopRefreshSpinner === 'function') {
+        stopRefreshSpinner();
+    }
 
     if (!justRefresh) {
         fetchIntervalId = setInterval(async () => {

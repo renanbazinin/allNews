@@ -16,9 +16,10 @@ async function fetchNews(endpoint, newsType) {
         document.getElementById('loading-gif').style.display = 'block';
 
         //const response = await fetch(`http://localhost:3000/${endpoint}`);
-        const response = await fetch(`https://allnews-production.up.railway.app/${endpoint}`);
-        //const response = await fetch(`https://all-news.glitch.me//${endpoint}`);
+        //const response = await fetch(`https://allnews-production.up.railway.app/${endpoint}`);
+        const response = await fetch(`https://allnews-server.onrender.com/${endpoint}`);
 
+        //const response = await fetch(`https://all-news.glitch.me//${endpoint}`);
         
         const newsItems = await response.json();
         document.getElementById('loading-gif').style.display = 'none';

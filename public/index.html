@@ -4,13 +4,16 @@
     <meta name="google-site-verification" content="jDk1s6N-IOBTrNM4PV6WqMvZVyTrDHe8nv0tHPHHvaQ" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#292929">
+    <meta name="theme-color" content="#0a0a0a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Renan News</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/x-icon" href="https://i.imgur.com/y6Zos1q.png">
     <link rel="apple-touch-icon" href="https://i.imgur.com/y6Zos1q.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -57,7 +60,7 @@
                 <input type="checkbox" id="haaretz-checkbox" name="haaretz" onchange="toggleSourceSelection('haaretz', 'Haaretz News')">
                 <img src="https://i.imgur.com/WMwYtrz.png" alt="Haaretz News">
             </label>
-            <label>
+            <label title="Refresh All News">
                 <img src="https://i.imgur.com/H65siyA.png" alt="Fetch All News" onclick="reloadPage()">
             </label>
         </div>
@@ -69,16 +72,24 @@
         </div>
         
         <div id="mode-switcher">
-            <button id="list-mode-btn" onclick="setDisplayMode('list')" class="active">List</button>
-            <button id="card-mode-btn" onclick="setDisplayMode('card')">Cards</button>
-            <button id="increase-font" onclick="adjustFontSize(1)">A+</button>
-            <button id="decrease-font" onclick="adjustFontSize(-1)">A-</button>
+            <button id="list-mode-btn" onclick="setDisplayMode('list')" class="active">
+                <span>List</span>
+            </button>
+            <button id="card-mode-btn" onclick="setDisplayMode('card')">
+                <span>Cards</span>
+            </button>
+            <button id="increase-font" onclick="adjustFontSize(1)" title="Increase font size">
+                A+
+            </button>
+            <button id="decrease-font" onclick="adjustFontSize(-1)" title="Decrease font size">
+                A-
+            </button>
         </div>
         
         <div id="refresh-container">
-            <button id="refresh-button" onclick="refreshNews(true)">
+            <button id="refresh-button" onclick="refreshNews(true)" title="Refresh all news">
                 <span class="refresh-icon">↻</span>
-                <span class="refresh-text">Refresh</span>
+                <span class="refresh-text">Refresh News</span>
             </button>
             <p id="last-updated">Last Updated: --:--:--</p>
         </div>
@@ -91,15 +102,72 @@
     </div>
     
     <footer>
-        <p>Contact: <a href="mailto:renabazinin2@gmail.com">renanbazinin2@gmail.com</a></p>
+        <p>Contact: <a href="mailto:renabazinin2@gmail.com">renabazinin2@gmail.com</a></p>
     </footer>
     
-    <button id="scroll-to-top" onclick="scrollToTop()">↑</button>
+    <button id="scroll-to-top" onclick="scrollToTop()" title="Scroll to top">↑</button>
 
     <script src="scripts.js"></script>
     <script>
         function reloadPage() {
             location.reload();
+        }
+        
+        // Add spinning animation to refresh button when clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            const refreshButton = document.getElementById('refresh-button');
+            
+            // Override the original refreshNews function to add spinning
+            if (typeof refreshNews === 'function') {
+                const originalRefreshNews = refreshNews;
+                window.refreshNews = function(forceRefresh) {
+                    // Start spinning
+                    refreshButton.classList.add('refreshing');
+                    
+                    // Call original function and handle completion
+                    const result = originalRefreshNews(forceRefresh);
+                    
+                    // If the function returns a promise, wait for it
+                    if (result && typeof result.then === 'function') {
+                        result.finally(() => {
+                            refreshButton.classList.remove('refreshing');
+                        });
+                    } else {
+                        // If no promise, stop spinning after a reasonable delay
+                        setTimeout(() => {
+                            refreshButton.classList.remove('refreshing');
+                        }, 2000);
+                    }
+                    
+                    return result;
+                };
+            } else {
+                // Fallback if refreshNews is not available yet
+                refreshButton.addEventListener('click', function() {
+                    this.classList.add('refreshing');
+                    
+                    // Stop spinning after 2 seconds if no other mechanism stops it
+                    setTimeout(() => {
+                        this.classList.remove('refreshing');
+                    }, 2000);
+                });
+            }
+        });
+        
+        // Function to stop refresh spinner (call this when fetch is complete)
+        function stopRefreshSpinner() {
+            const refreshButton = document.getElementById('refresh-button');
+            if (refreshButton) {
+                refreshButton.classList.remove('refreshing');
+            }
+        }
+        
+        // Function to start refresh spinner (call this when fetch starts)
+        function startRefreshSpinner() {
+            const refreshButton = document.getElementById('refresh-button');
+            if (refreshButton) {
+                refreshButton.classList.add('refreshing');
+            }
         }
     </script>
 </body>
