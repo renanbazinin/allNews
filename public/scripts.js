@@ -30,6 +30,10 @@ let refreshClickCount = 0;
 const maxRefreshClicks = 3;
 const refreshCooldownTime = 60000; // 60 seconds
 
+// Auto-refresh functionality
+let isAutoRefreshEnabled = false; // Default: auto-refresh is OFF
+const autoRefreshInterval = 30000; // 30 seconds
+
 function setDisplayMode(mode) {
     currentDisplayMode = mode;
     displayNewsItems(); // Re-render news items in the new mode
@@ -194,20 +198,6 @@ async function fetchSelectedNews(justRefresh = true) {
     // Stop the refresh spinner when all fetching is complete
     if (typeof stopRefreshSpinner === 'function') {
         stopRefreshSpinner();
-    }
-
-    if (!justRefresh) {
-        fetchIntervalId = setInterval(async () => {
-            console.log("Auto-refreshing news sources...");
-            for (const endpoint of endpoints) {
-                const checkbox = document.getElementById(`${endpoint}-checkbox`);
-                if (checkbox && checkbox.checked) {
-                    console.log(`Auto-refresh fetching news for: ${checkbox.name}`);
-                    await fetchNews(endpoint, checkbox.name);
-                }
-            }
-            updateLastUpdatedTime(); // Update time with every auto-refresh
-        }, 30000);
     }
 }
 
@@ -400,6 +390,69 @@ function refreshNews(calledByUser=false) {
     }, refreshCooldownTime);
 }
 
+function toggleAutoRefresh() {
+    isAutoRefreshEnabled = !isAutoRefreshEnabled;
+    const toggleButton = document.getElementById('auto-refresh-toggle');
+    
+    if (isAutoRefreshEnabled) {
+        // Enable auto-refresh
+        toggleButton.classList.remove('auto-refresh-off');
+        toggleButton.classList.add('auto-refresh-on');
+        toggleButton.title = 'Auto-refresh enabled (every 30s) - Click to disable';
+        
+        // Start auto-refresh interval
+        startAutoRefresh();
+        
+        console.log('Auto-refresh enabled');
+    } else {
+        // Disable auto-refresh
+        toggleButton.classList.remove('auto-refresh-on');
+        toggleButton.classList.add('auto-refresh-off');
+        toggleButton.title = 'Auto-refresh disabled - Click to enable';
+        
+        // Stop auto-refresh interval
+        stopAutoRefresh();
+        
+        console.log('Auto-refresh disabled');
+    }
+}
+
+function startAutoRefresh() {
+    // Clear any existing interval first
+    stopAutoRefresh();
+    
+    fetchIntervalId = setInterval(async () => {
+        console.log("Auto-refreshing news sources...");
+        
+        const endpoints = [
+            'bbc', 'nyt', 'ynet', 'maariv', 'n12', 'rotter', 'walla', 'calcalist', 'haaretz'
+        ];
+        
+        for (const endpoint of endpoints) {
+            const checkbox = document.getElementById(`${endpoint}-checkbox`);
+            if (checkbox && checkbox.checked) {
+                try {
+                    console.log(`Auto-refresh fetching news for: ${checkbox.name}`);
+                    await fetchNews(endpoint, checkbox.name);
+                } catch (error) {
+                    console.error(`Auto-refresh error for ${endpoint}:`, error);
+                }
+            }
+        }
+        
+        updateLastUpdatedTime(); // Update time with every auto-refresh
+        filterNews(); // Apply current filters after refresh
+    }, autoRefreshInterval);
+}
+
+function stopAutoRefresh() {
+    if (fetchIntervalId) {
+        clearInterval(fetchIntervalId);
+        fetchIntervalId = null;
+        console.log('Auto-refresh interval cleared');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
     
@@ -416,6 +469,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateLastUpdatedTime();
     refreshNews();
+    
+    // Initialize auto-refresh button state (default: OFF)
+    const autoRefreshButton = document.getElementById('auto-refresh-toggle');
+    if (autoRefreshButton) {
+        autoRefreshButton.classList.add('auto-refresh-off');
+        autoRefreshButton.classList.remove('auto-refresh-on');
+        autoRefreshButton.title = 'Auto-refresh disabled - Click to enable';
+    }
+    
       // Apply saved font size if exists
     try {
         const newsContainer = document.getElementById('news-container');

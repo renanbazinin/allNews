@@ -407,6 +407,68 @@ h1 {
     transition: all 0.1s ease;
 }
 
+/* Auto-refresh toggle button */
+#auto-refresh-toggle {
+    background: var(--secondary-bg);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    border-radius: var(--border-radius-xl);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+    margin-left: 8px;
+}
+
+#auto-refresh-toggle.auto-refresh-on {
+    background: var(--gradient-primary);
+    border-color: var(--accent-color);
+    color: white;
+    box-shadow: var(--shadow-md), 0 0 15px rgba(0, 122, 255, 0.3);
+}
+
+#auto-refresh-toggle.auto-refresh-off {
+    background: var(--secondary-bg);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+#auto-refresh-toggle:hover {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: var(--shadow-md);
+}
+
+#auto-refresh-toggle.auto-refresh-on:hover {
+    box-shadow: var(--shadow-md), 0 0 20px rgba(0, 122, 255, 0.4);
+}
+
+#auto-refresh-toggle:active {
+    transform: translateY(0) scale(0.98);
+    transition: all 0.1s ease;
+}
+
+.auto-refresh-icon {
+    font-size: 14px;
+    transition: transform var(--transition-fast);
+    display: inline-block;
+}
+
+#auto-refresh-toggle.auto-refresh-on .auto-refresh-icon {
+    animation: pulse-timer 2s ease-in-out infinite;
+}
+
+@keyframes pulse-timer {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
 #last-updated {
     font-size: 14px;
     color: var(--text-secondary);
@@ -753,6 +815,13 @@ footer.scrolled {
         justify-content: center;
     }
     
+    #auto-refresh-toggle {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        padding: 10px 16px;
+    }
+    
     .news-item h2 {
         font-size: 16px;
     }
@@ -820,6 +889,12 @@ footer.scrolled {
     #refresh-button {
         padding: 10px 16px;
         font-size: 13px;
+    }
+    
+    #auto-refresh-toggle {
+        padding: 8px 14px;
+        font-size: 11px;
+        margin-left: 0;
     }
     
     #scroll-to-top {

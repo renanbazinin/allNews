@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Renan News</title>
-    <link rel="manifest" href="manifest.json">
+  
     <link rel="icon" type="image/x-icon" href="https://i.imgur.com/y6Zos1q.png">
     <link rel="apple-touch-icon" href="https://i.imgur.com/y6Zos1q.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -90,6 +90,10 @@
             <button id="refresh-button" onclick="refreshNews(true)" title="Refresh all news">
                 <span class="refresh-icon">↻</span>
                 <span class="refresh-text">Refresh News</span>
+            </button>
+            <button id="auto-refresh-toggle" onclick="toggleAutoRefresh()" title="Toggle auto-refresh every 30 seconds" class="auto-refresh-off">
+                <span class="auto-refresh-icon">⏱</span>
+                <span class="auto-refresh-text">Auto Refresh</span>
             </button>
             <p id="last-updated">Last Updated: --:--:--</p>
         </div>
