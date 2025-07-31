@@ -207,6 +207,24 @@ h1 {
     margin-bottom: 12px;
 }
 
+/* Hint text styling */
+.hint-text {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    margin: 8px 0;
+    padding: 6px 12px;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+    transition: opacity var(--transition-smooth);
+}
+
+.hint-text:hover {
+    opacity: 1;
+}
+
 /* Search bar */
 #search-container {
     display: flex;
@@ -680,6 +698,32 @@ h1 {
     font-size: 14px;
 }
 
+/* Read more link styles */
+.read-more-link {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: var(--gradient-primary);
+    color: white !important;
+    border-radius: var(--border-radius-md);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+
+.read-more-link:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    color: white !important;
+}
+
+.read-more-container {
+    margin-top: 8px;
+    padding: 8px 16px;
+}
+
 /* Links */
 .news-item a,
 .publisher a,
@@ -822,6 +866,12 @@ footer.scrolled {
         padding: 10px 16px;
     }
     
+    .hint-text {
+        font-size: 11px;
+        margin: 6px 0;
+        padding: 4px 8px;
+    }
+    
     .news-item h2 {
         font-size: 16px;
     }
@@ -895,6 +945,13 @@ footer.scrolled {
         padding: 8px 14px;
         font-size: 11px;
         margin-left: 0;
+    }
+    
+    .hint-text {
+        font-size: 10px;
+        margin: 4px 0;
+        padding: 2px 6px;
+        opacity: 0.6;
     }
     
     #scroll-to-top {

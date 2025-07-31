@@ -285,7 +285,9 @@ function displayNewsItems() {
                 <p dir="${titleDir}"><strong>${militaryTime}</strong> - ${escapeQuotes(item.title)} <span class="publisher">(<a href="${item.link}" target="_blank">${item.source}</a>)</span></p>
                 <div class="news-description" id="description-${index}" style="display: none;">
                     <p dir="${descDir}">${escapeQuotes(description)}</p>
+                    ${description && description.trim() !== "" ? `<a href="${item.link}" target="_blank" class="read-more-link">Read more</a>` : ''}
                 </div>
+                ${description && description.trim() === "" ? `<div class="read-more-container"><a href="${item.link}" target="_blank" class="read-more-link">Read more</a></div>` : ''}
             `;
 
             if (description && description.trim() !== "") {
