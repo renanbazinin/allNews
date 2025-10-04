@@ -479,7 +479,51 @@ document.addEventListener('DOMContentLoaded', function() {
         autoRefreshButton.classList.remove('auto-refresh-on');
         autoRefreshButton.title = 'Auto-refresh disabled - Click to enable';
     }
-    
+
+    // If URL contains ?stream=true -> enable auto-refresh, slightly zoom out and scroll down
+    try {
+        if (typeof window !== 'undefined' && window.location && window.location.search) {
+            const params = new URLSearchParams(window.location.search);
+            const streamParam = params.get('stream');
+            if (streamParam && String(streamParam).toLowerCase() === 'true') {
+                // enable auto refresh and update UI
+                isAutoRefreshEnabled = true;
+                if (autoRefreshButton) {
+                    autoRefreshButton.classList.remove('auto-refresh-off');
+                    autoRefreshButton.classList.add('auto-refresh-on');
+                    autoRefreshButton.title = 'Auto-refresh enabled (every 30s) - Click to disable';
+                }
+
+                // start the auto-refresh loop
+                try {
+                    startAutoRefresh();
+                } catch (e) {
+                    console.error('Failed to start auto-refresh from stream param', e);
+                }
+
+                // apply a small zoom-out for more content (best-effort, null-proof)
+                try {
+                    // non-standard but widely supported
+                    document.body.style.zoom = '95%';
+                } catch (e) {
+                    try {
+                        document.documentElement.style.transform = 'scale(0.95)';
+                        document.documentElement.style.transformOrigin = 'top center';
+                    } catch (err) {
+                        // ignore if cannot apply
+                    }
+                }
+
+                // scroll down a bit so content is visible; delay slightly to let layout settle
+                setTimeout(() => {
+                    try { window.scrollBy(0, 130); } catch (e) { /* ignore */ }
+                }, 350);
+            }
+        }
+    } catch (err) {
+        console.error('Error parsing URL parameters for stream mode:', err);
+    }
+
       // Apply saved font size if exists
     try {
         const newsContainer = document.getElementById('news-container');
