@@ -516,8 +516,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // scroll down a bit so content is visible; delay slightly to let layout settle
                 setTimeout(() => {
-                    try { window.scrollBy(0, 130); } catch (e) { /* ignore */ }
-                }, 350);
+                    try { window.scrollBy(0, 195); } catch (e) { /* ignore */ }
+                }, 1050);
             }
         }
     } catch (err) {
