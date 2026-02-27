@@ -66,6 +66,7 @@ h1 {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
+    line-height: 1;
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -87,7 +88,7 @@ h1 {
 }
 
 #sources-nav.compact {
-    padding: 3px 0 3px;
+    padding: 4px 0;
 }
 
 #sources-nav.compact #buttons-container {
