@@ -560,13 +560,17 @@ h1 {
     border-color: var(--border-color-strong);
 }
 
-.news-item-list.clickable {
+.news-item-list.expandable {
     cursor: pointer;
+}
+
+.news-item-list.expandable,
+.news-item-list.navigable {
     padding-right: 44px;
 }
 
-/* Chevron indicator for expandable items */
-.news-item-list.clickable::after {
+/* Chevron for items with an expandable description */
+.news-item-list.expandable::after {
     content: "";
     position: absolute;
     right: 14px;
@@ -577,14 +581,28 @@ h1 {
     border-left: 5px solid var(--text-secondary);
     border-top: 4px solid transparent;
     border-bottom: 4px solid transparent;
-    transition: all var(--transition-smooth);
+    transition: transform var(--transition-smooth), border-left-color var(--transition-smooth), opacity var(--transition-smooth);
     opacity: 0.5;
 }
 
-.news-item-list.clickable.expanded::after {
+.news-item-list.expandable.expanded::after {
     transform: translateY(-50%) rotate(90deg);
     border-left-color: var(--accent-color);
     opacity: 1;
+}
+
+/* External-link indicator (visual only) for items with no expandable description */
+.news-item-list.navigable::after {
+    content: "↗";
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-secondary);
+    opacity: 0.45;
+    pointer-events: none;
 }
 
 .news-item-list p {
@@ -678,29 +696,20 @@ h1 {
     font-size: 13px;
 }
 
-/* Read more link */
-.read-more-link {
+/* "Read original" link inside an expanded description */
+.read-original-link {
     display: inline-block;
     margin-top: 8px;
-    padding: 4px 12px;
-    background: rgba(59, 130, 246, 0.12);
     color: var(--accent-secondary) !important;
-    border-radius: var(--border-radius-sm);
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
     text-decoration: none;
-    transition: all var(--transition-fast);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    transition: color var(--transition-fast), transform var(--transition-fast);
 }
 
-.read-more-link:hover {
-    background: rgba(59, 130, 246, 0.2);
-    border-color: var(--accent-color);
-    color: white !important;
-}
-
-.read-more-container {
-    margin-top: 6px;
+.read-original-link:hover {
+    color: var(--accent-color) !important;
+    transform: translateX(2px);
 }
 
 /* ===== CARD MODE ===== */
@@ -820,13 +829,20 @@ footer.scrolled {
     width: 44px;
     height: 44px;
     font-size: 20px;
-    display: none;
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-md);
     cursor: pointer;
     z-index: 40;
-    transition: all var(--transition-fast);
+    transition: opacity 0.2s ease, transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+#scroll-to-top.visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 #scroll-to-top:hover {
@@ -907,11 +923,13 @@ footer.scrolled {
         font-size: 13px;
     }
 
-    .news-item-list.clickable {
+    .news-item-list.expandable,
+    .news-item-list.navigable {
         padding-right: 38px;
     }
 
-    .news-item-list.clickable::after {
+    .news-item-list.expandable::after,
+    .news-item-list.navigable::after {
         right: 12px;
     }
 }
@@ -994,7 +1012,8 @@ footer.scrolled {
         margin-bottom: 5px;
     }
 
-    .news-item-list.clickable {
+    .news-item-list.expandable,
+    .news-item-list.navigable {
         padding: 12px 36px 12px 14px;
     }
 
