@@ -102,9 +102,13 @@
             </div>
 
             <span class="news-count" id="news-count">0 articles</span>
-            <p id="last-updated">Last Updated: --:--:--</p>
+            <p id="last-updated" class="idle">
+                <span class="status-spinner" aria-hidden="true"></span><span class="status-label">Last updated --:--:--</span>
+            </p>
         </div>
     </div>
+
+    <div id="error-container"></div>
 
     <div id="news-container" dir="ltr"></div>
 

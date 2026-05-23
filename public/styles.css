@@ -489,7 +489,7 @@ h1 {
     50% { transform: scale(1.15); }
 }
 
-/* Last updated */
+/* Last updated — fixed-width slot, no jitter while updating */
 #last-updated {
     font-size: 11px;
     color: var(--text-secondary);
@@ -498,15 +498,44 @@ h1 {
     margin-left: auto;
     white-space: nowrap;
     opacity: 0.7;
+    min-width: 138px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
 }
 
-#last-updated.loading {
-    animation: pulse 1s infinite;
+#last-updated .status-label {
+    display: inline-block;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+/* Inline CSS spinner — no textContent mutation, no width change */
+.status-spinner {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    animation: status-spin 0.9s linear infinite;
+    animation-play-state: paused;
+}
+
+#last-updated.updating .status-spinner,
+#last-updated.retrying .status-spinner {
+    opacity: 0.9;
+    animation-play-state: running;
+}
+
+#last-updated.retrying .status-spinner {
+    color: var(--accent-color, currentColor);
+}
+
+@keyframes status-spin {
+    to { transform: rotate(360deg); }
 }
 
 /* ===== LOADING ===== */
@@ -856,14 +885,26 @@ footer.scrolled {
 }
 
 /* ===== ERROR ===== */
+/* Error banner — reserved slot, collapses without shifting the news list */
 #error-container {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin: 0 12px;
+    padding: 0 14px;
     background: rgba(239, 68, 68, 0.08);
     border-left: 3px solid var(--error-color);
-    padding: 10px 14px;
-    margin: 8px 12px;
     border-radius: var(--border-radius-sm);
     font-size: 13px;
     color: #fca5a5;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease, margin 0.25s ease;
+}
+
+#error-container.has-errors {
+    max-height: 200px;
+    opacity: 1;
+    padding: 10px 14px;
+    margin: 8px 12px;
 }
 
 /* ===== MOBILE 768px ===== */
@@ -913,6 +954,11 @@ footer.scrolled {
 
     #last-updated {
         font-size: 10px;
+        min-width: 100px;
+    }
+
+    .news-count {
+        min-width: 60px;
     }
 
     .news-item h2 {
@@ -992,6 +1038,14 @@ footer.scrolled {
 
     #refresh-button {
         font-size: 15px;
+    }
+
+    #last-updated {
+        min-width: 72px;
+    }
+
+    .news-count {
+        min-width: 50px;
     }
 
     #scroll-to-top {
@@ -1159,6 +1213,9 @@ button, a, .clickable {
     background: var(--secondary-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-xl);
+    min-width: 80px;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 /* ===== EMPTY STATE ===== */

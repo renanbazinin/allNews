@@ -1,6 +1,6 @@
 // ===== Constants =====
 
-const API_BASE = 'https://allnews-server.onrender.com';
+const API_BASE = 'https://allnews-server-1018085155010.europe-west3.run.app';
 
 const HEBREW_SOURCES = new Set(['ynet', 'maariv', 'n12', 'rotter', 'walla', 'haaretz']);
 
@@ -19,7 +19,6 @@ const doubleTapDelay = 300;
 
 let currentDisplayMode = 'list';
 let lastSuccessfulUpdate = null;
-let lastUpdatedAnimationInterval = null;
 let currentFontSize = 16;
 
 let newsData = {};
@@ -31,6 +30,9 @@ let nextFetchScheduled = false;
 let currentAbortController = null;
 let autoRefreshTimerId = null;
 let searchDebounceId = null;
+
+// Per-source state for the in-flight cycle: 'pending' | 'loaded' | 'failed' | 'retrying'
+let cycleSourceStates = new Map();
 
 // ===== Helpers =====
 
@@ -129,38 +131,67 @@ function sleep(ms, signal) {
 
 // ===== Network =====
 
+// Per-source fetch with one retry on transient errors. Owns the per-source
+// AbortController and the 40s timeout that bounds a hung backend. Cycle abort
+// (passed as `signal`) short-circuits both attempts. Per-source TimeoutError
+// is retryable, identical to a network error.
 async function fetchWithRetry(url, options = {}) {
-    const signal = options.signal;
+    const { signal: cycleSignal, onRetry, timeoutMs = 40000 } = options;
     let attempt = 0;
     while (true) {
+        // Per-attempt source controller, chained to the cycle signal so a
+        // cycle abort propagates and cancels the in-flight request.
+        const sourceController = new AbortController();
+        let onCycleAbort;
+        if (cycleSignal) {
+            if (cycleSignal.aborted) {
+                sourceController.abort(new DOMException('Cycle aborted', 'AbortError'));
+            } else {
+                onCycleAbort = () => sourceController.abort(new DOMException('Cycle aborted', 'AbortError'));
+                cycleSignal.addEventListener('abort', onCycleAbort, { once: true });
+            }
+        }
+        const timeoutId = setTimeout(
+            () => sourceController.abort(new DOMException('Per-source timeout', 'TimeoutError')),
+            timeoutMs
+        );
+
         try {
-            const res = await fetch(url, options);
+            const res = await fetch(url, { signal: sourceController.signal });
             if (res.status >= 500) {
                 if (attempt === 0) {
                     attempt++;
-                    await sleep(1500, signal);
+                    if (onRetry) onRetry();
+                    try { await sleep(1500, cycleSignal); } catch (e) { throw e; }
                     continue;
                 }
                 throw new Error(`HTTP ${res.status}`);
             }
             return res;
         } catch (err) {
-            if (err.name === 'AbortError') throw err;
+            // Cycle was aborted — propagate the abort, do not retry.
+            if (cycleSignal && cycleSignal.aborted) throw err;
+            // Otherwise (network error, 5xx after json, or per-source TimeoutError):
+            // retry once after a backoff.
             if (attempt === 0) {
                 attempt++;
-                await sleep(1500, signal);
+                if (onRetry) onRetry();
+                try { await sleep(1500, cycleSignal); } catch (e) { throw e; }
                 continue;
             }
             throw err;
+        } finally {
+            clearTimeout(timeoutId);
+            if (onCycleAbort && cycleSignal) cycleSignal.removeEventListener('abort', onCycleAbort);
         }
     }
 }
 
-async function fetchNews(endpoint, newsType, { render = true, signal } = {}) {
+async function fetchNews(endpoint, newsType, { render = true, signal, onRetry } = {}) {
     const checkbox = document.getElementById(`${endpoint}-checkbox`);
     if (!checkbox || !checkbox.checked) return;
 
-    const response = await fetchWithRetry(`${API_BASE}/${endpoint}`, { signal });
+    const response = await fetchWithRetry(`${API_BASE}/${endpoint}`, { signal, onRetry });
     const newsItems = await response.json();
 
     if (!checkbox.checked || (signal && signal.aborted)) return;
@@ -185,18 +216,21 @@ async function fetchSelectedNews() {
         refreshButton.classList.add('refreshing');
     }
 
+    cycleSourceStates = new Map();
+    const failedEndpoints = [];
+
     try {
         const activeFetches = [];
         for (const endpoint of ENDPOINTS) {
             const checkbox = document.getElementById(`${endpoint}-checkbox`);
             if (checkbox && checkbox.checked) {
                 activeFetches.push({ endpoint, name: checkbox.name });
+                cycleSourceStates.set(endpoint, 'pending');
             }
         }
 
         if (activeFetches.length === 0) {
             displayNewsItems();
-            updateLastUpdatedTime(true);
             return;
         }
 
@@ -204,29 +238,48 @@ async function fetchSelectedNews() {
         if (isInitialRender) {
             showSkeletonLoading(activeFetches.length);
         }
-        updateLastUpdatedTime(false);
+        renderStatusLine();
 
         let completed = 0;
-        const failedEndpoints = [];
 
         // Render each source as it arrives — don't wait for the slowest.
         // fetchNews with render: true triggers a reconcile per source, so the
         // first responder paints immediately and later ones stream in.
-        const promises = activeFetches.map(({ endpoint, name }) =>
-            fetchNews(endpoint, name, { render: true, signal })
+        const promises = activeFetches.map(({ endpoint, name }) => {
+            const onRetry = () => {
+                if (cycleSourceStates.get(endpoint) === 'pending') {
+                    cycleSourceStates.set(endpoint, 'retrying');
+                    renderStatusLine();
+                }
+            };
+            return fetchNews(endpoint, name, { render: true, signal, onRetry })
                 .then(() => {
                     completed++;
+                    // User may have toggled this source off mid-cycle — only
+                    // update state if it's still part of this cycle's accounting.
+                    if (cycleSourceStates.has(endpoint)) {
+                        cycleSourceStates.set(endpoint, 'loaded');
+                        renderStatusLine();
+                    }
                     if (isInitialRender) updateFetchProgress(completed, activeFetches.length);
                 })
                 .catch(error => {
                     completed++;
-                    if (error.name !== 'AbortError') {
+                    if (error.name === 'AbortError') {
+                        // Cycle abort — don't mark as failed, don't surface in banner.
+                        return;
+                    }
+                    if (cycleSourceStates.has(endpoint)) {
+                        cycleSourceStates.set(endpoint, 'failed');
                         failedEndpoints.push(`${name} (${endpoint})`);
                         console.error(`Error fetching ${name}:`, error);
+                        // Live banner update: surface failures the moment they're final.
+                        displayFetchErrors(failedEndpoints);
+                        renderStatusLine();
                     }
                     if (isInitialRender) updateFetchProgress(completed, activeFetches.length);
-                })
-        );
+                });
+        });
 
         await Promise.all(promises);
 
@@ -236,15 +289,24 @@ async function fetchSelectedNews() {
         // render fired (catch path doesn't call displayNewsItems).
         displayNewsItems();
 
-        if (failedEndpoints.length > 0) {
-            displayFetchErrors(failedEndpoints);
-        } else {
+        const succeededCount = Array.from(cycleSourceStates.values()).filter(s => s === 'loaded').length;
+        if (failedEndpoints.length === 0) {
             clearFetchErrors();
+        } else {
+            displayFetchErrors(failedEndpoints);
+        }
+        if (succeededCount > 0) {
             lastSuccessfulUpdate = new Date();
         }
-
-        updateLastUpdatedTime(failedEndpoints.length === 0);
     } finally {
+        const statesArr = Array.from(cycleSourceStates.values());
+        finalizeStatusLine({
+            totalCount: statesArr.length,
+            failedCount: statesArr.filter(s => s === 'failed').length,
+            succeededCount: statesArr.filter(s => s === 'loaded').length,
+            aborted: signal.aborted,
+        });
+
         isFetching = false;
         currentAbortController = null;
         if (refreshButton) {
@@ -343,17 +405,21 @@ function updateFetchProgress(completed, total) {
 }
 
 function displayFetchErrors(failedEndpoints) {
-    let errorContainer = document.getElementById('error-container');
-    if (!errorContainer) {
-        errorContainer = el('div', { id: 'error-container' });
-        const searchContainer = document.getElementById('search-container');
-        searchContainer.parentNode.insertBefore(errorContainer, searchContainer);
+    const errorContainer = document.getElementById('error-container');
+    if (!errorContainer) return;
+    if (!failedEndpoints || failedEndpoints.length === 0) {
+        clearFetchErrors();
+        return;
     }
     errorContainer.replaceChildren(`Failed to fetch news from: ${failedEndpoints.join(', ')}`);
+    errorContainer.classList.add('has-errors');
 }
 
 function clearFetchErrors() {
-    document.getElementById('error-container')?.remove();
+    const errorContainer = document.getElementById('error-container');
+    if (!errorContainer) return;
+    errorContainer.classList.remove('has-errors');
+    errorContainer.replaceChildren();
 }
 
 function buildEmptyState(anyChecked) {
@@ -567,6 +633,13 @@ function toggleSourceSelection(endpoint, newsType) {
         fetchNews(endpoint, newsType);
     } else {
         delete newsData[endpoint];
+        // If a cycle is in flight, drop this source from its accounting so
+        // the indicator doesn't stay stuck at "n/total" waiting on a source
+        // the user no longer wants.
+        if (cycleSourceStates.has(endpoint)) {
+            cycleSourceStates.delete(endpoint);
+            renderStatusLine();
+        }
         displayNewsItems();
     }
 }
@@ -664,35 +737,57 @@ function updateNewsCount() {
     elNode.textContent = `${total} article${total !== 1 ? 's' : ''}`;
 }
 
-function startLoadingAnimation() {
-    const lastUpdatedElement = document.getElementById('last-updated');
-    let dots = 0;
-    stopLoadingAnimation();
-    lastUpdatedAnimationInterval = setInterval(() => {
-        dots = (dots % 3) + 1;
-        lastUpdatedElement.textContent = `Last Updated: Fetching${'.'.repeat(dots)}`;
-    }, 500);
+// Status line — two writers only: in-progress (renderStatusLine) and terminal
+// (finalizeStatusLine). Everything else MUST go through one of these.
+
+function renderStatusLine() {
+    const lastUpdatedEl = document.getElementById('last-updated');
+    if (!lastUpdatedEl) return;
+    const label = lastUpdatedEl.querySelector('.status-label');
+    if (!label) return;
+
+    const states = Array.from(cycleSourceStates.values());
+    const total = states.length;
+    if (total === 0) return;
+    const settled = states.filter(s => s === 'loaded' || s === 'failed').length;
+    const isRetrying = states.some(s => s === 'retrying');
+
+    let text = `Updating (${settled}/${total})…`;
+    if (isRetrying) text += ' · retrying';
+
+    label.textContent = text;
+    lastUpdatedEl.classList.remove('idle');
+    lastUpdatedEl.classList.toggle('retrying', isRetrying);
+    lastUpdatedEl.classList.add('updating');
 }
 
-function stopLoadingAnimation() {
-    clearInterval(lastUpdatedAnimationInterval);
-    lastUpdatedAnimationInterval = null;
-}
+function finalizeStatusLine({ totalCount, failedCount, succeededCount, aborted }) {
+    const lastUpdatedEl = document.getElementById('last-updated');
+    if (!lastUpdatedEl) return;
+    const label = lastUpdatedEl.querySelector('.status-label');
+    if (!label) return;
 
-function updateLastUpdatedTime(finalTime = true) {
-    const lastUpdatedElement = document.getElementById('last-updated');
-    if (finalTime) {
-        if (lastSuccessfulUpdate) {
-            lastSuccessfulUpdate = new Date();
-            const formattedTime = lastSuccessfulUpdate.toLocaleTimeString('en-US', { hour12: false });
-            lastUpdatedElement.textContent = `Last Updated: ${formattedTime}`;
-        } else {
-            lastUpdatedElement.textContent = `Last Updated: None`;
-        }
-        stopLoadingAnimation();
-    } else {
-        startLoadingAnimation();
+    lastUpdatedEl.classList.remove('updating', 'retrying');
+    lastUpdatedEl.classList.add('idle');
+
+    // Cycle aborted before any source settled — keep the prior terminal label.
+    if (aborted && succeededCount === 0 && failedCount === 0) return;
+
+    // All sources failed this cycle.
+    if (totalCount > 0 && failedCount === totalCount && succeededCount === 0) {
+        const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+        label.textContent = `Failed at ${now}`;
+        return;
     }
+
+    // At least one source succeeded — show the last successful time.
+    if (lastSuccessfulUpdate) {
+        const t = lastSuccessfulUpdate.toLocaleTimeString('en-US', { hour12: false });
+        label.textContent = `Last updated ${t}`;
+        return;
+    }
+
+    label.textContent = 'Last updated --:--:--';
 }
 
 // ===== Scroll handling =====
@@ -808,13 +903,20 @@ function setupCheckboxHandlers() {
 }
 
 function selectOnlyThisSource(selectedEndpoint, selectedNewsType) {
+    // Abort any in-flight cycle — its source-state map is for the old
+    // selection and would otherwise keep the indicator stuck at the wrong
+    // count until those fetches settled.
+    if (currentAbortController) currentAbortController.abort();
     const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
     checkboxes.forEach(cb => cb.checked = false);
     document.getElementById(`${selectedEndpoint}-checkbox`).checked = true;
     newsData = {};
     renderedItemKeys = new Set();
     document.getElementById('news-container').replaceChildren();
-    fetchNews(selectedEndpoint, selectedNewsType);
+    // Route through fetchSelectedNews so the new cycle gets proper accounting.
+    // Single-flight handles the case where the prior cycle hasn't fully
+    // unwound yet (nextFetchScheduled = true → microtask follow-up).
+    fetchSelectedNews();
 }
 
 // ===== Toggle description (legacy entry kept for any external callers) =====
@@ -889,7 +991,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('news-container').style.fontSize = `${currentFontSize}px`;
 
-    updateLastUpdatedTime();
     fetchSelectedNews();
 
     const autoRefreshButton = document.getElementById('auto-refresh-toggle');
