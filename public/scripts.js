@@ -1,1035 +1,520 @@
-// ===== Constants =====
-
+// The web app and Android WebView share this feed and these reading preferences.
 const API_BASE = 'https://allnews-server-1018085155010.europe-west3.run.app';
-
-const HEBREW_SOURCES = new Set(['ynet', 'maariv', 'n12', 'rotter', 'walla', 'haaretz']);
-
-const SOURCE_KEY_MAP = {
-    'BBC News': 'bbc', 'NYT News': 'nyt', 'Ynet News': 'ynet',
-    'Maariv News': 'maariv', 'N12 News': 'n12', 'Rotter News': 'rotter',
-    'Walla News': 'walla', 'Haaretz News': 'haaretz'
-};
-
 const ENDPOINTS = ['bbc', 'nyt', 'ynet', 'maariv', 'n12', 'rotter', 'walla', 'haaretz'];
-
+const SOURCE_NAMES = { bbc: 'BBC', nyt: 'The New York Times', ynet: 'Ynet', maariv: 'Maariv', n12: 'N12', rotter: 'Rotter', walla: 'Walla', haaretz: 'Haaretz' };
+const STORAGE_KEY = 'allnews.reading.v1';
+const SAVED_KEY = 'allnews.saved.v1';
 const autoRefreshInterval = 30000;
-const doubleTapDelay = 300;
-
-// ===== Module state =====
 
 let currentDisplayMode = 'list';
+let currentFeedView = 'all';
+let currentFontSize = 18;
 let lastSuccessfulUpdate = null;
-let currentFontSize = 16;
-
 let newsData = {};
-let renderedItemKeys = new Set();
+let savedArticles = new Map();
+let visibleItems = [];
 let isAutoRefreshEnabled = false;
-
 let isFetching = false;
 let nextFetchScheduled = false;
 let currentAbortController = null;
 let autoRefreshTimerId = null;
 let searchDebounceId = null;
-
-// Per-source state for the in-flight cycle: 'pending' | 'loaded' | 'failed' | 'retrying'
 let cycleSourceStates = new Map();
-
-// ===== Helpers =====
+let descriptionSequence = 0;
 
 function el(tag, props = {}, ...children) {
     const node = document.createElement(tag);
-    for (const [k, v] of Object.entries(props || {})) {
-        if (v == null || v === false) continue;
-        if (k === 'class') node.className = v;
-        else if (k === 'dataset') Object.assign(node.dataset, v);
-        else if (k === 'on') for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
-        else node.setAttribute(k, v);
+    for (const [key, value] of Object.entries(props)) {
+        if (value == null || value === false) continue;
+        if (key === 'class') node.className = value;
+        else if (key === 'dataset') Object.assign(node.dataset, value);
+        else if (key === 'on') Object.entries(value).forEach(([event, handler]) => node.addEventListener(event, handler));
+        else node.setAttribute(key, value);
     }
-    for (const child of children) appendChild(node, child);
+    children.flat().forEach(child => {
+        if (child != null && child !== false) node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    });
     return node;
 }
 
-function appendChild(node, child) {
-    if (child == null || child === false) return;
-    if (Array.isArray(child)) {
-        for (const sub of child) appendChild(node, sub);
-        return;
-    }
-    node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
-}
-
 function safeHttpUrl(value) {
-    if (!value || typeof value !== 'string') return null;
+    if (typeof value !== 'string') return null;
     try {
-        const u = new URL(value);
-        return (u.protocol === 'http:' || u.protocol === 'https:') ? value : null;
-    } catch {
-        return null;
-    }
+        const url = new URL(value);
+        return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+    } catch { return null; }
 }
 
-// Parse HTML inertly (template content does not load resources or run scripts)
-// and return the plain text representation.
-function htmlToText(html) {
-    if (!html || typeof html !== 'string') return '';
-    const tpl = document.createElement('template');
-    tpl.innerHTML = html;
-    return tpl.content.textContent || '';
+// Template content is inert; headlines and summaries are always rendered as text.
+function htmlToText(value) {
+    if (typeof value !== 'string') return '';
+    const template = document.createElement('template');
+    template.innerHTML = value;
+    return (template.content.textContent || '').trim();
 }
 
-function formatMilitaryTime(date) {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+function detectLanguage(text) { return /[\u0590-\u05ff]/.test(text) ? 'rtl' : 'ltr'; }
+function getItemKey(item) { return `${item.newsType}::${safeHttpUrl(item.link) || ''}::${item.title || ''}`; }
+function selectedSources() { return ENDPOINTS.filter(source => document.getElementById(`${source}-checkbox`)?.checked); }
+function readStorage(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 }
-
-function formatFetchTimestamp(date) {
-    return date.toLocaleString();
+function writeStorage(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
+}
+function persistPreferences() {
+    writeStorage(STORAGE_KEY, { sources: selectedSources(), displayMode: currentDisplayMode, fontSize: currentFontSize, autoRefresh: isAutoRefreshEnabled });
 }
 
 function getRelativeTime(date) {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHr = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffMin < 1) return 'now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    if (diffHr < 24) return `${diffHr}h ago`;
-    if (diffDay === 1) return 'yesterday';
-    return `${diffDay}d ago`;
-}
-
-function getItemKey(item) {
-    return `${item.newsType}::${item.link || ''}::${item.title || ''}`;
-}
-
-function detectLanguage(text) {
-    if (!text) return 'ltr';
-    return /[֐-׿]/.test(text) ? 'rtl' : 'ltr';
+    if (!Number.isFinite(date.getTime())) return 'Latest';
+    const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+    if (minutes < 2880) return 'Yesterday';
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 function sleep(ms, signal) {
     return new Promise((resolve, reject) => {
-        if (signal && signal.aborted) {
-            const err = new Error('Aborted');
-            err.name = 'AbortError';
-            reject(err);
-            return;
-        }
-        const t = setTimeout(resolve, ms);
-        if (signal) {
-            signal.addEventListener('abort', () => {
-                clearTimeout(t);
-                const err = new Error('Aborted');
-                err.name = 'AbortError';
-                reject(err);
-            }, { once: true });
-        }
+        const abort = () => { clearTimeout(timer); reject(new DOMException('Cycle aborted', 'AbortError')); };
+        const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms);
+        if (signal?.aborted) abort();
+        else signal?.addEventListener('abort', abort, { once: true });
     });
 }
 
-// ===== Network =====
-
-// Per-source fetch with one retry on transient errors. Owns the per-source
-// AbortController and the 40s timeout that bounds a hung backend. Cycle abort
-// (passed as `signal`) short-circuits both attempts. Per-source TimeoutError
-// is retryable, identical to a network error.
-async function fetchWithRetry(url, options = {}) {
-    const { signal: cycleSignal, onRetry, timeoutMs = 40000 } = options;
-    let attempt = 0;
-    while (true) {
-        // Per-attempt source controller, chained to the cycle signal so a
-        // cycle abort propagates and cancels the in-flight request.
-        const sourceController = new AbortController();
-        let onCycleAbort;
-        if (cycleSignal) {
-            if (cycleSignal.aborted) {
-                sourceController.abort(new DOMException('Cycle aborted', 'AbortError'));
-            } else {
-                onCycleAbort = () => sourceController.abort(new DOMException('Cycle aborted', 'AbortError'));
-                cycleSignal.addEventListener('abort', onCycleAbort, { once: true });
-            }
-        }
-        const timeoutId = setTimeout(
-            () => sourceController.abort(new DOMException('Per-source timeout', 'TimeoutError')),
-            timeoutMs
-        );
-
+// A cycle can be cancelled independently of each request's timeout. Transient
+// failures retry once, and every timer/listener is released after its attempt.
+async function fetchWithRetry(url, { signal: cycleSignal, onRetry, timeoutMs = 40000 } = {}) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const controller = new AbortController();
+        const abort = () => controller.abort(new DOMException('Cycle aborted', 'AbortError'));
+        if (cycleSignal?.aborted) abort();
+        else cycleSignal?.addEventListener('abort', abort, { once: true });
+        const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeoutMs);
+        let shouldRetry = false;
         try {
-            const res = await fetch(url, { signal: sourceController.signal });
-            if (res.status >= 500) {
-                if (attempt === 0) {
-                    attempt++;
-                    if (onRetry) onRetry();
-                    try { await sleep(1500, cycleSignal); } catch (e) { throw e; }
-                    continue;
-                }
-                throw new Error(`HTTP ${res.status}`);
+            const response = await fetch(url, { signal: controller.signal });
+            if (response.status >= 500 || response.status === 429) {
+                if (attempt === 0) shouldRetry = true;
+                else throw new Error(`HTTP ${response.status}`);
+            } else {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                // Keep the request deadline active while the body is read too.
+                return await response.json();
             }
-            return res;
-        } catch (err) {
-            // Cycle was aborted — propagate the abort, do not retry.
-            if (cycleSignal && cycleSignal.aborted) throw err;
-            // Otherwise (network error, 5xx after json, or per-source TimeoutError):
-            // retry once after a backoff.
-            if (attempt === 0) {
-                attempt++;
-                if (onRetry) onRetry();
-                try { await sleep(1500, cycleSignal); } catch (e) { throw e; }
-                continue;
-            }
-            throw err;
+        } catch (error) {
+            if (cycleSignal?.aborted || attempt > 0 || /^HTTP 4(?!29)/.test(error.message)) throw error;
+            shouldRetry = true;
         } finally {
-            clearTimeout(timeoutId);
-            if (onCycleAbort && cycleSignal) cycleSignal.removeEventListener('abort', onCycleAbort);
+            clearTimeout(timer);
+            cycleSignal?.removeEventListener('abort', abort);
         }
+        if (shouldRetry) { onRetry?.(); await sleep(1500, cycleSignal); }
     }
 }
 
-async function fetchNews(endpoint, newsType, { render = true, signal, onRetry } = {}) {
-    const checkbox = document.getElementById(`${endpoint}-checkbox`);
-    if (!checkbox || !checkbox.checked) return;
-
-    const response = await fetchWithRetry(`${API_BASE}/${endpoint}`, { signal, onRetry });
-    const newsItems = await response.json();
-
-    if (!checkbox.checked || (signal && signal.aborted)) return;
-
-    newsData[endpoint] = newsItems.map(item => ({ ...item, newsType }));
-
-    if (render) displayNewsItems();
-}
-
-async function fetchSelectedNews() {
-    if (isFetching) {
-        nextFetchScheduled = true;
-        return;
-    }
-    isFetching = true;
-    currentAbortController = new AbortController();
-    const signal = currentAbortController.signal;
-
-    const refreshButton = document.getElementById('refresh-button');
-    if (refreshButton) {
-        refreshButton.disabled = true;
-        refreshButton.classList.add('refreshing');
-    }
-
-    cycleSourceStates = new Map();
-    const failedEndpoints = [];
-
-    try {
-        const activeFetches = [];
-        for (const endpoint of ENDPOINTS) {
-            const checkbox = document.getElementById(`${endpoint}-checkbox`);
-            if (checkbox && checkbox.checked) {
-                activeFetches.push({ endpoint, name: checkbox.name });
-                cycleSourceStates.set(endpoint, 'pending');
-            }
-        }
-
-        if (activeFetches.length === 0) {
-            displayNewsItems();
-            return;
-        }
-
-        const isInitialRender = renderedItemKeys.size === 0;
-        if (isInitialRender) {
-            showSkeletonLoading(activeFetches.length);
-        }
-        renderStatusLine();
-
-        let completed = 0;
-
-        // Render each source as it arrives — don't wait for the slowest.
-        // fetchNews with render: true triggers a reconcile per source, so the
-        // first responder paints immediately and later ones stream in.
-        const promises = activeFetches.map(({ endpoint, name }) => {
-            const onRetry = () => {
-                if (cycleSourceStates.get(endpoint) === 'pending') {
-                    cycleSourceStates.set(endpoint, 'retrying');
-                    renderStatusLine();
-                }
-            };
-            return fetchNews(endpoint, name, { render: true, signal, onRetry })
-                .then(() => {
-                    completed++;
-                    // User may have toggled this source off mid-cycle — only
-                    // update state if it's still part of this cycle's accounting.
-                    if (cycleSourceStates.has(endpoint)) {
-                        cycleSourceStates.set(endpoint, 'loaded');
-                        renderStatusLine();
-                    }
-                    if (isInitialRender) updateFetchProgress(completed, activeFetches.length);
-                })
-                .catch(error => {
-                    completed++;
-                    if (error.name === 'AbortError') {
-                        // Cycle abort — don't mark as failed, don't surface in banner.
-                        return;
-                    }
-                    if (cycleSourceStates.has(endpoint)) {
-                        cycleSourceStates.set(endpoint, 'failed');
-                        failedEndpoints.push(`${name} (${endpoint})`);
-                        console.error(`Error fetching ${name}:`, error);
-                        // Live banner update: surface failures the moment they're final.
-                        displayFetchErrors(failedEndpoints);
-                        renderStatusLine();
-                    }
-                    if (isInitialRender) updateFetchProgress(completed, activeFetches.length);
-                });
-        });
-
-        await Promise.all(promises);
-
-        if (signal.aborted) return;
-
-        // Final pass: covers the all-sources-failed case where no per-source
-        // render fired (catch path doesn't call displayNewsItems).
-        displayNewsItems();
-
-        const succeededCount = Array.from(cycleSourceStates.values()).filter(s => s === 'loaded').length;
-        if (failedEndpoints.length === 0) {
-            clearFetchErrors();
-        } else {
-            displayFetchErrors(failedEndpoints);
-        }
-        if (succeededCount > 0) {
-            lastSuccessfulUpdate = new Date();
-        }
-    } finally {
-        const statesArr = Array.from(cycleSourceStates.values());
-        finalizeStatusLine({
-            totalCount: statesArr.length,
-            failedCount: statesArr.filter(s => s === 'failed').length,
-            succeededCount: statesArr.filter(s => s === 'loaded').length,
-            aborted: signal.aborted,
-        });
-
-        isFetching = false;
-        currentAbortController = null;
-        if (refreshButton) {
-            refreshButton.disabled = false;
-            refreshButton.classList.remove('refreshing');
-        }
-
-        if (nextFetchScheduled && !document.hidden) {
-            nextFetchScheduled = false;
-            queueMicrotask(() => fetchSelectedNews());
-        } else {
-            nextFetchScheduled = false;
-            if (isAutoRefreshEnabled && !document.hidden) {
-                scheduleNextFetch();
-            }
-        }
-    }
-}
-
-// ===== Auto-refresh lifecycle =====
-
-function scheduleNextFetch() {
-    if (autoRefreshTimerId) clearTimeout(autoRefreshTimerId);
-    autoRefreshTimerId = setTimeout(() => {
-        autoRefreshTimerId = null;
-        if (isAutoRefreshEnabled && !document.hidden) {
-            fetchSelectedNews();
-        }
-    }, autoRefreshInterval);
-}
-
-function startAutoRefresh() {
-    scheduleNextFetch();
-}
-
-function stopAutoRefresh() {
-    if (autoRefreshTimerId) {
-        clearTimeout(autoRefreshTimerId);
-        autoRefreshTimerId = null;
-    }
-    if (currentAbortController) currentAbortController.abort();
-}
-
-function toggleAutoRefresh() {
-    isAutoRefreshEnabled = !isAutoRefreshEnabled;
-    const toggleButton = document.getElementById('auto-refresh-toggle');
-    if (isAutoRefreshEnabled) {
-        toggleButton.classList.remove('auto-refresh-off');
-        toggleButton.classList.add('auto-refresh-on');
-        toggleButton.title = 'Auto-refresh enabled (every 30s) - Click to disable';
-        startAutoRefresh();
-    } else {
-        toggleButton.classList.remove('auto-refresh-on');
-        toggleButton.classList.add('auto-refresh-off');
-        toggleButton.title = 'Auto-refresh disabled - Click to enable';
-        stopAutoRefresh();
-    }
-}
-
-function refreshNews() {
-    fetchSelectedNews();
-}
-
-function reloadPage() {
-    location.reload();
-}
-
-// ===== Rendering =====
-
-function showSkeletonLoading(count) {
-    const newsContainer = document.getElementById('news-container');
-    newsContainer.replaceChildren();
-    newsContainer.appendChild(
-        el('div', { class: 'fetch-progress' },
-            el('div', { class: 'fetch-progress-bar', id: 'fetch-progress-bar', style: 'width: 0%' })
-        )
-    );
-    const skeletonCount = Math.min(count * 3, 12);
-    for (let i = 0; i < skeletonCount; i++) {
-        newsContainer.appendChild(
-            el('div', { class: 'skeleton-item' },
-                el('div', { class: 'skeleton-line skeleton-title' }),
-                el('div', { class: 'skeleton-line skeleton-text' }),
-                el('div', { class: 'skeleton-line skeleton-text short' })
-            )
-        );
-    }
-}
-
-function updateFetchProgress(completed, total) {
-    const bar = document.getElementById('fetch-progress-bar');
-    if (!bar) return;
-    const pct = Math.round((completed / total) * 100);
-    bar.style.width = `${pct}%`;
-    if (pct >= 100) bar.classList.add('done');
-}
-
-function displayFetchErrors(failedEndpoints) {
-    const errorContainer = document.getElementById('error-container');
-    if (!errorContainer) return;
-    if (!failedEndpoints || failedEndpoints.length === 0) {
-        clearFetchErrors();
-        return;
-    }
-    errorContainer.replaceChildren(`Failed to fetch news from: ${failedEndpoints.join(', ')}`);
-    errorContainer.classList.add('has-errors');
-}
-
-function clearFetchErrors() {
-    const errorContainer = document.getElementById('error-container');
-    if (!errorContainer) return;
-    errorContainer.classList.remove('has-errors');
-    errorContainer.replaceChildren();
-}
-
-function buildEmptyState(anyChecked) {
-    return el('div', { class: 'empty-state' },
-        el('div', { class: 'empty-state-icon' }, anyChecked ? '⏳' : '📰'),
-        el('div', { class: 'empty-state-text' }, anyChecked ? 'Loading news...' : 'No sources selected'),
-        el('div', { class: 'empty-state-hint' }, anyChecked ? 'Fetching articles from your selected sources' : 'Tap on source icons above to start reading')
-    );
-}
-
-function buildNewsItemNode(item, sourceKeyMap) {
-    const pubDate = new Date(item.pubDate);
-    const militaryTime = formatMilitaryTime(pubDate);
-    const key = getItemKey(item);
-    const titleText = htmlToText(item.title);
-    const descText = htmlToText(item.description);
-    const titleDir = detectLanguage(titleText);
-    const descDir = detectLanguage(descText);
-    const isHebrewSource = HEBREW_SOURCES.has(item.newsType);
-    const sourceKey = sourceKeyMap[item.newsType] || '';
-    const relTime = getRelativeTime(pubDate);
-    const safeLink = safeHttpUrl(item.link);
-    const safeThumb = safeHttpUrl(item.thumbnail);
-    const sourceName = String(item.source || '');
-
-    const anchorProps = (extra = {}) => safeLink
-        ? { href: safeLink, target: '_blank', rel: 'noopener noreferrer', ...extra }
-        : extra;
-
-    let newsItem;
-
-    if (currentDisplayMode === 'list') {
-        const description = (item.newsType === 'maariv') ? '' : descText;
-        const hasDescription = description && description.trim() !== '';
-
-        const publisherSpan = el('span', { class: 'publisher' },
-            '(',
-            sourceKey ? el('span', { class: `source-dot ${sourceKey}` }) : null,
-            el('a', anchorProps(), sourceName),
-            ')'
-        );
-
-        const titleP = el('p', { dir: titleDir },
-            el('strong', {}, militaryTime),
-            el('span', { class: 'time-relative' }, relTime),
-            ' - ',
-            titleText,
-            ' ',
-            publisherSpan
-        );
-
-        const children = [titleP];
-        if (hasDescription) {
-            children.push(
-                el('div', { class: 'news-description' },
-                    el('p', { dir: descDir }, description),
-                    el('a', anchorProps({ class: 'read-original-link' }), 'Read original →')
-                )
-            );
-        }
-
-        newsItem = el('div', { class: 'news-item-list' }, ...children);
-
-        if (hasDescription) {
-            newsItem.classList.add('expandable');
-            newsItem.addEventListener('click', (e) => {
-                if (e.target.tagName === 'A') return;
-                const desc = newsItem.querySelector('.news-description');
-                if (desc) {
-                    desc.classList.toggle('open');
-                    newsItem.classList.toggle('expanded');
-                }
-            });
-        } else if (safeLink) {
-            // Visual-only indicator: row is not clickable; source chip remains the link
-            newsItem.classList.add('navigable');
-        }
-    } else {
-        const h2 = el('h2', { dir: titleDir },
-            el('span', { class: 'news-time' }, `[${militaryTime}]`),
-            el('span', { class: 'time-relative' }, relTime),
-            ' ',
-            titleText
-        );
-
-        const cardChildren = [
-            h2,
-            el('p', { dir: descDir }, descText),
-            el('a', anchorProps(), 'Read more'),
-            el('p', {}, `Published on: ${pubDate.toLocaleString()}`)
-        ];
-        if (safeThumb) {
-            cardChildren.push(el('img', { src: safeThumb, alt: 'Thumbnail' }));
-        }
-        cardChildren.push(
-            el('p', { class: 'fetch-timestamp' }, `Fetched on: ${formatFetchTimestamp(new Date())}`)
-        );
-        cardChildren.push(
-            el('p', { class: 'publisher' },
-                sourceKey ? el('span', { class: `source-dot ${sourceKey}` }) : null,
-                ` Publisher: ${sourceName}`
-            )
-        );
-
-        newsItem = el('div', { class: 'news-item', dir: isHebrewSource ? 'rtl' : 'ltr' }, ...cardChildren);
-    }
-
-    newsItem.setAttribute('data-item-key', key);
-    newsItem.classList.add(isHebrewSource ? 'hebrew-source' : 'english-source');
-    return newsItem;
-}
-
-function reconcile(allNewsItems) {
-    const newsContainer = document.getElementById('news-container');
-
-    newsContainer.querySelectorAll('.skeleton-item, .fetch-progress, .empty-state').forEach(n => n.remove());
-
-    if (allNewsItems.length === 0) {
-        const anyChecked = Array.from(document.querySelectorAll('#buttons-container input[type="checkbox"]')).some(cb => cb.checked);
-        newsContainer.querySelectorAll('.news-item, .news-item-list').forEach(n => n.remove());
-        newsContainer.appendChild(buildEmptyState(anyChecked));
-        renderedItemKeys = new Set();
-        updateNewsCount();
-        return;
-    }
-
-    const newKeys = new Set(allNewsItems.map(getItemKey));
-
-    // Mark stale nodes for removal (fade out, then drop)
-    const existingNodes = Array.from(newsContainer.querySelectorAll('.news-item, .news-item-list'));
-    for (const node of existingNodes) {
-        if (node.classList.contains('removing')) continue;
-        const key = node.getAttribute('data-item-key');
-        if (!newKeys.has(key)) {
-            node.classList.add('removing');
-            setTimeout(() => node.remove(), 200);
-        }
-    }
-
-    // Map live (not .removing) existing nodes by key
-    const existingByKey = new Map();
-    newsContainer.querySelectorAll('.news-item:not(.removing), .news-item-list:not(.removing)').forEach(node => {
-        const key = node.getAttribute('data-item-key');
-        if (key) existingByKey.set(key, node);
-    });
-
-    // Walk sorted items; insert or move into position
-    let prev = null;
-    for (const item of allNewsItems) {
-        const key = getItemKey(item);
-        let node = existingByKey.get(key);
-        const isNew = !node;
-        if (isNew) {
-            node = buildNewsItemNode(item, SOURCE_KEY_MAP);
-            node.classList.add('new-item');
-        }
-        const target = prev ? prev.nextSibling : newsContainer.firstChild;
-        if (node !== target) {
-            newsContainer.insertBefore(node, target);
-        }
-        prev = node;
-    }
-
-    requestAnimationFrame(() => {
-        newsContainer.querySelectorAll('.new-item').forEach(n => n.classList.remove('new-item'));
-    });
-
-    renderedItemKeys = newKeys;
-    updateNewsCount();
-}
-
-function displayNewsItems() {
-    let allNewsItems = [];
-    for (const source in newsData) {
-        if (newsData[source] && Array.isArray(newsData[source])) {
-            allNewsItems = allNewsItems.concat(newsData[source]);
-        }
-    }
-
-    allNewsItems.sort((a, b) => {
-        const dateA = a.pubDate ? new Date(a.pubDate) : new Date(0);
-        const dateB = b.pubDate ? new Date(b.pubDate) : new Date(0);
-        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-        return dateB - dateA;
-    });
-
-    reconcile(allNewsItems);
-    applyFontSize();
-    applyFilter();
-}
-
-// ===== Display mode, source toggles, font size =====
-
-function setDisplayMode(mode) {
-    currentDisplayMode = mode;
-    const listBtn = document.getElementById('list-mode-btn');
-    const cardBtn = document.getElementById('card-mode-btn');
-    if (listBtn && cardBtn) {
-        listBtn.classList.toggle('active', mode === 'list');
-        cardBtn.classList.toggle('active', mode === 'card');
-    }
-    // Different node shapes for list/card — force full rebuild
-    renderedItemKeys = new Set();
-    document.getElementById('news-container').replaceChildren();
+async function fetchNews(endpoint, { signal, onRetry } = {}) {
+    const items = await fetchWithRetry(`${API_BASE}/${endpoint}`, { signal, onRetry });
+    if (!Array.isArray(items)) throw new Error('This source returned an invalid feed');
+    if (signal?.aborted || !document.getElementById(`${endpoint}-checkbox`)?.checked) return;
+    newsData[endpoint] = items.filter(item => item && typeof item.title === 'string').map(item => ({ ...item, newsType: endpoint }));
     displayNewsItems();
 }
 
-function toggleSourceSelection(endpoint, newsType) {
-    const checkbox = document.getElementById(`${endpoint}-checkbox`);
-    if (checkbox && checkbox.checked) {
-        fetchNews(endpoint, newsType);
-    } else {
-        delete newsData[endpoint];
-        // If a cycle is in flight, drop this source from its accounting so
-        // the indicator doesn't stay stuck at "n/total" waiting on a source
-        // the user no longer wants.
-        if (cycleSourceStates.has(endpoint)) {
-            cycleSourceStates.delete(endpoint);
+async function fetchSelectedNews() {
+    if (isFetching) { nextFetchScheduled = true; return; }
+    if (autoRefreshTimerId) { clearTimeout(autoRefreshTimerId); autoRefreshTimerId = null; }
+    isFetching = true;
+    currentAbortController = new AbortController();
+    const { signal } = currentAbortController;
+    const sources = selectedSources();
+    const failed = [];
+    const refresh = document.getElementById('refresh-button');
+    if (refresh) { refresh.disabled = true; refresh.classList.add('refreshing'); }
+    cycleSourceStates = new Map(sources.map(source => [source, 'pending']));
+    clearFetchErrors();
+    renderStatusLine();
+    displayNewsItems();
+    try {
+        await Promise.all(sources.map(async source => {
+            try {
+                await fetchNews(source, { signal, onRetry: () => {
+                    cycleSourceStates.set(source, 'retrying');
+                    renderStatusLine();
+                } });
+                if (signal.aborted) return;
+                cycleSourceStates.set(source, 'loaded');
+            } catch (error) {
+                if (signal.aborted) return;
+                cycleSourceStates.set(source, 'failed');
+                failed.push(source);
+                displayFetchErrors(failed);
+                console.warn(`Unable to refresh ${SOURCE_NAMES[source]}: ${error.message}`);
+            }
             renderStatusLine();
-        }
+        }));
+        if (!signal.aborted && [...cycleSourceStates.values()].includes('loaded')) lastSuccessfulUpdate = new Date();
+    } finally {
+        isFetching = false;
+        currentAbortController = null;
+        if (refresh) { refresh.disabled = false; refresh.classList.remove('refreshing'); }
+        finalizeStatusLine({ aborted: signal.aborted });
         displayNewsItems();
+        if (nextFetchScheduled && !document.hidden) {
+            nextFetchScheduled = false;
+            queueMicrotask(fetchSelectedNews);
+        } else {
+            nextFetchScheduled = false;
+            if (isAutoRefreshEnabled && !document.hidden) scheduleNextFetch();
+        }
     }
 }
 
-function adjustFontSize(change) {
-    currentFontSize += change;
-    if (currentFontSize < 12) currentFontSize = 12;
-    if (currentFontSize > 24) currentFontSize = 24;
-    applyFontSize();
-    showFontSizeFeedback();
+function scheduleNextFetch() {
+    clearTimeout(autoRefreshTimerId);
+    autoRefreshTimerId = setTimeout(() => {
+        autoRefreshTimerId = null;
+        if (isAutoRefreshEnabled && !document.hidden) fetchSelectedNews();
+    }, autoRefreshInterval);
 }
-
-function applyFontSize() {
-    const newsContainer = document.getElementById('news-container');
-    if (!newsContainer) return;
-    newsContainer.style.fontSize = `${currentFontSize}px`;
-    newsContainer.querySelectorAll('.news-item, .news-item-list').forEach(item => {
-        const heading = item.querySelector('h2');
-        if (heading) heading.style.fontSize = `${currentFontSize + 2}px`;
-        item.querySelectorAll('p:not(.publisher):not(.fetch-timestamp)').forEach(p => {
-            p.style.fontSize = `${currentFontSize}px`;
-        });
-    });
-    newsContainer.querySelectorAll('.news-description p').forEach(d => {
-        d.style.fontSize = `${currentFontSize}px`;
-    });
-}
-
-function showFontSizeFeedback() {
-    let feedbackEl = document.getElementById('font-size-feedback');
-    if (!feedbackEl) {
-        feedbackEl = el('div', { id: 'font-size-feedback' });
-        Object.assign(feedbackEl.style, {
-            position: 'fixed', bottom: '120px', left: '50%',
-            transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.7)',
-            color: 'white', padding: '10px 20px', borderRadius: '20px',
-            zIndex: '1000', transition: 'opacity 0.3s ease'
-        });
-        document.body.appendChild(feedbackEl);
+function syncAutoRefreshButton() {
+    const button = document.getElementById('auto-refresh-toggle');
+    if (button) {
+        button.classList.toggle('auto-refresh-on', isAutoRefreshEnabled);
+        button.classList.toggle('auto-refresh-off', !isAutoRefreshEnabled);
+        button.setAttribute('aria-pressed', String(isAutoRefreshEnabled));
+        button.title = isAutoRefreshEnabled ? 'Live updates every 30 seconds. Turn off' : 'Turn on live updates every 30 seconds';
     }
-    feedbackEl.textContent = `Font size: ${currentFontSize}px`;
-    feedbackEl.style.opacity = '1';
-    clearTimeout(window.fontSizeFeedbackTimeout);
-    window.fontSizeFeedbackTimeout = setTimeout(() => {
-        feedbackEl.style.opacity = '0';
-    }, 1500);
+    const label = document.getElementById('auto-refresh-label');
+    if (label) label.textContent = isAutoRefreshEnabled ? 'Live on' : 'Live off';
+}
+function toggleAutoRefresh() {
+    isAutoRefreshEnabled = !isAutoRefreshEnabled;
+    syncAutoRefreshButton();
+    persistPreferences();
+    if (isAutoRefreshEnabled) scheduleNextFetch();
+    else { clearTimeout(autoRefreshTimerId); autoRefreshTimerId = null; }
+}
+function refreshNews() { fetchSelectedNews(); }
+
+function displayFetchErrors(sources) {
+    const container = document.getElementById('error-container');
+    if (!container) return;
+    container.classList.add('has-errors');
+    container.replaceChildren(`Couldn't update ${sources.map(source => SOURCE_NAMES[source]).join(', ')}. Try again, or choose another source. `,
+        el('button', { type: 'button', on: { click: refreshNews } }, 'Try again'));
+}
+function clearFetchErrors() {
+    const container = document.getElementById('error-container');
+    if (container) { container.classList.remove('has-errors'); container.replaceChildren(); }
 }
 
-// ===== Search =====
+function bookmarkIcon() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.7');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4Z');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+    return svg;
+}
+function syncSaveButton(button, item) {
+    const saved = savedArticles.has(getItemKey(item));
+    button.classList.toggle('is-saved', saved);
+    button.setAttribute('aria-pressed', String(saved));
+    button.setAttribute('aria-label', saved ? 'Remove saved article' : 'Save article');
+    button.title = saved ? 'Remove from saved stories' : 'Save for later';
+    const label = button.querySelector('.save-label');
+    if (label) label.textContent = saved ? 'Saved' : 'Save';
+}
+function toggleSavedArticle(item) {
+    const key = getItemKey(item);
+    const removingFocusedSavedItem = currentFeedView === 'saved' && savedArticles.has(key) && document.activeElement?.closest('article')?.dataset.itemKey === key;
+    const focusedIndex = visibleItems.findIndex(story => getItemKey(story) === key);
+    if (savedArticles.has(key)) savedArticles.delete(key);
+    else savedArticles.set(key, {
+        title: item.title, description: typeof item.description === 'string' ? item.description : '',
+        pubDate: item.pubDate || '', link: safeHttpUrl(item.link) || '', newsType: item.newsType,
+        savedAt: Date.now()
+    });
+    const stored = writeStorage(SAVED_KEY, [...savedArticles.values()]);
+    const feedback = document.getElementById('reading-feedback');
+    if (feedback) feedback.textContent = stored ? (savedArticles.has(key) ? 'Article saved for later.' : 'Article removed from saved.') : 'Saved for this session. Your browser could not store this on your device.';
+    displayNewsItems();
+    syncFeedNavigation();
+    if (removingFocusedSavedItem) {
+        const buttons = document.querySelectorAll('#news-container .save-story');
+        const target = buttons[Math.min(focusedIndex, buttons.length - 1)] || document.querySelector('#news-container .empty-state button');
+        target?.focus({ preventScroll: true });
+    }
+}
 
-function applyFilter() {
-    const query = document.getElementById('search-bar').value.toLowerCase();
-    filterNewsByQuery(query);
+function buildNewsItemNode(item) {
+    const title = htmlToText(item.title) || 'Untitled story';
+    const description = htmlToText(item.description);
+    const source = ENDPOINTS.includes(item.newsType) ? item.newsType : '';
+    const date = new Date(item.pubDate);
+    const validDate = Number.isFinite(date.getTime());
+    const link = safeHttpUrl(item.link);
+    const descriptionId = `story-summary-${++descriptionSequence}`;
+    const anchorProps = link ? { href: link, target: '_blank', rel: 'noopener noreferrer' } : {};
+    const time = el('time', { class: 'story-time', datetime: validDate ? date.toISOString() : null, title: validDate ? date.toLocaleString() : null }, getRelativeTime(date));
+    const save = el('button', { class: 'save-story', type: 'button', on: { click: () => toggleSavedArticle(item) } }, bookmarkIcon(), el('span', { class: 'save-label' }, 'Save'));
+    syncSaveButton(save, item);
+    const summary = description && description !== title ? el('div', { class: 'story-description', id: descriptionId, hidden: '' }, el('p', { dir: detectLanguage(description), lang: detectLanguage(description) === 'rtl' ? 'he' : 'en' }, description)) : null;
+    const summaryToggle = summary ? el('button', {
+        type: 'button', class: 'summary-toggle', 'aria-expanded': 'false', 'aria-controls': descriptionId,
+        on: { click: event => {
+            const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
+            event.currentTarget.setAttribute('aria-expanded', String(!expanded));
+            event.currentTarget.textContent = expanded ? 'Quick read +' : 'Close summary −';
+            summary.hidden = expanded;
+            summary.closest('article').classList.toggle('expanded', !expanded);
+        } }
+    }, 'Quick read +') : null;
+    const article = el('article', {
+        class: currentDisplayMode === 'list' ? 'news-item-list' : 'news-item',
+        dataset: { itemKey: getItemKey(item), source, content: JSON.stringify([item.title, item.description, item.pubDate, item.link]) }
+    },
+    el('div', { class: 'story-meta' }, el('span', { class: 'source-badge' }, el('span', { class: `source-dot ${source}`, 'aria-hidden': 'true' }), SOURCE_NAMES[source] || 'News'), time),
+    el('h2', { class: 'story-title', dir: detectLanguage(title), lang: detectLanguage(title) === 'rtl' ? 'he' : 'en' }, link ? el('a', anchorProps, title) : title),
+    summary,
+    el('div', { class: 'story-actions' }, el('div', { class: 'story-links' }, summaryToggle, link ? el('a', { ...anchorProps, class: 'read-original-link', 'aria-label': `Read original: ${title}` }, 'Full story ↗') : null), save));
+    return article;
+}
+
+function buildEmptyState(query) {
+    const hasSources = selectedSources().length > 0;
+    const allFailed = cycleSourceStates.size > 0 && [...cycleSourceStates.values()].every(state => state === 'failed');
+    let title, hint, action;
+    if (query) {
+        title = 'No stories found'; hint = `No ${currentFeedView === 'saved' ? 'saved ' : ''}stories match “${query}”. Try another word or a source name.`;
+        action = el('button', { type: 'button', on: { click: clearSearch } }, 'Clear search');
+    } else if (currentFeedView === 'saved') {
+        title = 'Your next good read, saved.'; hint = 'Tap the bookmark on any story to keep it here for later.';
+        action = el('button', { type: 'button', on: { click: () => setFeedView('all') } }, 'Explore the latest');
+    } else if (!hasSources) {
+        title = 'Make this your edition'; hint = 'Choose a few sources above to bring your news together.';
+        action = el('button', { type: 'button', on: { click: scrollToSources } }, 'Choose sources');
+    } else if (isFetching) {
+        title = 'Putting your edition together'; hint = 'The latest stories will appear as each source arrives.';
+    } else if (allFailed) {
+        title = 'We couldn’t load your edition'; hint = 'Check your connection, then try again. Your saved stories are still here.';
+        action = el('button', { type: 'button', on: { click: refreshNews } }, 'Try again');
+    } else {
+        title = 'A quiet moment'; hint = 'These sources have no stories to show right now. Refresh or choose another source.';
+        action = el('button', { type: 'button', on: { click: refreshNews } }, 'Refresh stories');
+    }
+    return el('div', { class: 'empty-state', role: 'status' }, el('span', { class: 'empty-state-icon', 'aria-hidden': 'true' }, '✳'), el('h2', { class: 'empty-state-text' }, title), el('p', { class: 'empty-state-hint' }, hint), action);
+}
+
+function getFeedItems() {
+    const items = currentFeedView === 'saved' ? [...savedArticles.values()] : selectedSources().flatMap(source => newsData[source] || []);
+    const deduplicated = [...new Map(items.map(item => [getItemKey(item), item])).values()];
+    return deduplicated.sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0));
+}
+function displayNewsItems() {
+    const container = document.getElementById('news-container');
+    if (!container) return;
+    const query = (document.getElementById('search-bar')?.value || '').trim();
+    const normalized = query.toLocaleLowerCase();
+    visibleItems = getFeedItems().filter(item => !normalized || `${htmlToText(item.title)} ${htmlToText(item.description)} ${SOURCE_NAMES[item.newsType] || ''}`.toLocaleLowerCase().includes(normalized));
+    container.classList.toggle('card-view', currentDisplayMode === 'card');
+    container.classList.toggle('list-view', currentDisplayMode === 'list');
+    container.setAttribute('aria-busy', String(isFetching && currentFeedView === 'all'));
+    const existing = new Map([...container.querySelectorAll('article[data-item-key]')].map(node => [node.dataset.itemKey, node]));
+    container.querySelectorAll('.empty-state').forEach(node => node.remove());
+    const keys = new Set(visibleItems.map(getItemKey));
+    existing.forEach((node, key) => { if (!keys.has(key)) node.remove(); });
+    let previous = null;
+    for (const item of visibleItems) {
+        const key = getItemKey(item);
+        const fingerprint = JSON.stringify([item.title, item.description, item.pubDate, item.link]);
+        let node = existing.get(key);
+        if (node && node.dataset.content !== fingerprint) { node.remove(); node = null; }
+        if (!node) node = buildNewsItemNode(item);
+        node.classList.toggle('news-item-list', currentDisplayMode === 'list');
+        node.classList.toggle('news-item', currentDisplayMode === 'card');
+        syncSaveButton(node.querySelector('.save-story'), item);
+        const target = previous ? previous.nextSibling : container.firstChild;
+        if (node !== target) container.insertBefore(node, target);
+        previous = node;
+    }
+    if (!visibleItems.length) container.appendChild(buildEmptyState(query));
+    updateNewsCount(query);
     updateSearchClearVisibility();
+    syncFeedNavigation();
 }
 
-function filterNews() {
-    applyFilter();
-}
-
-function filterNewsByQuery(query) {
-    const newsContainer = document.getElementById('news-container');
-    const allNewsItems = newsContainer.querySelectorAll('.news-item, .news-item-list');
-    allNewsItems.forEach(item => {
-        const titleNode = item.querySelector('p, h2');
-        const descNode = item.querySelector('.news-description p');
-        const title = (titleNode ? titleNode.textContent : '').toLowerCase();
-        const description = (descNode ? descNode.textContent : '').toLowerCase();
-        item.style.display = (title.includes(query) || description.includes(query)) ? '' : 'none';
+function syncFeedNavigation() {
+    updateSourceSummary();
+    document.querySelectorAll('[data-feed-view]').forEach(button => {
+        const active = button.dataset.feedView === currentFeedView;
+        button.classList.toggle('active', active);
+        if (button.getAttribute('role') === 'tab') button.setAttribute('aria-selected', String(active));
+        else button.setAttribute('aria-pressed', String(active));
     });
+    const count = document.getElementById('saved-count');
+    if (count) count.textContent = String(savedArticles.size);
+    const heading = document.getElementById('feed-title');
+    if (heading) heading.textContent = currentFeedView === 'saved' ? 'Saved for later' : 'The latest';
 }
-
-function clearSearch() {
-    const searchBar = document.getElementById('search-bar');
-    searchBar.value = '';
-    applyFilter();
-    searchBar.focus();
+function setFeedView(view) {
+    if (!['all', 'saved'].includes(view)) return;
+    currentFeedView = view;
+    displayNewsItems();
 }
-
-function updateSearchClearVisibility() {
-    const searchBar = document.getElementById('search-bar');
-    const clearBtn = document.getElementById('search-clear');
-    if (clearBtn) clearBtn.classList.toggle('visible', searchBar.value.length > 0);
-}
-
-// ===== News count, last-updated =====
-
-function updateNewsCount() {
-    const elNode = document.getElementById('news-count');
-    if (!elNode) return;
-    let total = 0;
-    for (const source in newsData) {
-        if (newsData[source] && Array.isArray(newsData[source])) total += newsData[source].length;
+function setDisplayMode(mode) {
+    if (!['list', 'card'].includes(mode)) return;
+    currentDisplayMode = mode;
+    for (const value of ['list', 'card']) {
+        const button = document.getElementById(`${value}-mode-btn`);
+        if (button) { button.classList.toggle('active', mode === value); button.setAttribute('aria-pressed', String(mode === value)); }
     }
-    elNode.textContent = `${total} article${total !== 1 ? 's' : ''}`;
+    persistPreferences();
+    displayNewsItems();
 }
-
-// Status line — two writers only: in-progress (renderStatusLine) and terminal
-// (finalizeStatusLine). Everything else MUST go through one of these.
-
-function renderStatusLine() {
-    const lastUpdatedEl = document.getElementById('last-updated');
-    if (!lastUpdatedEl) return;
-    const label = lastUpdatedEl.querySelector('.status-label');
-    if (!label) return;
-
-    const states = Array.from(cycleSourceStates.values());
-    const total = states.length;
-    if (total === 0) return;
-    const settled = states.filter(s => s === 'loaded' || s === 'failed').length;
-    const isRetrying = states.some(s => s === 'retrying');
-
-    let text = `Updating (${settled}/${total})…`;
-    if (isRetrying) text += ' · retrying';
-
-    label.textContent = text;
-    lastUpdatedEl.classList.remove('idle');
-    lastUpdatedEl.classList.toggle('retrying', isRetrying);
-    lastUpdatedEl.classList.add('updating');
+function updateSourceSummary() {
+    const count = selectedSources().length;
+    const number = document.getElementById('source-selection-count');
+    if (number) number.textContent = `${count} selected`;
+    const summary = document.getElementById('source-summary');
+    if (summary) summary.textContent = currentFeedView === 'saved' ? 'On this device' : `${count} selected source${count === 1 ? '' : 's'}`;
 }
-
-function finalizeStatusLine({ totalCount, failedCount, succeededCount, aborted }) {
-    const lastUpdatedEl = document.getElementById('last-updated');
-    if (!lastUpdatedEl) return;
-    const label = lastUpdatedEl.querySelector('.status-label');
-    if (!label) return;
-
-    lastUpdatedEl.classList.remove('updating', 'retrying');
-    lastUpdatedEl.classList.add('idle');
-
-    // Cycle aborted before any source settled — keep the prior terminal label.
-    if (aborted && succeededCount === 0 && failedCount === 0) return;
-
-    // All sources failed this cycle.
-    if (totalCount > 0 && failedCount === totalCount && succeededCount === 0) {
-        const now = new Date().toLocaleTimeString('en-US', { hour12: false });
-        label.textContent = `Failed at ${now}`;
-        return;
-    }
-
-    // At least one source succeeded — show the last successful time.
-    if (lastSuccessfulUpdate) {
-        const t = lastSuccessfulUpdate.toLocaleTimeString('en-US', { hour12: false });
-        label.textContent = `Last updated ${t}`;
-        return;
-    }
-
-    label.textContent = 'Last updated --:--:--';
-}
-
-// ===== Scroll handling =====
-
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function setupScrollHandler() {
-    let isCompact = false;
-    window.addEventListener('scroll', () => {
-        const scrollToTopButton = document.getElementById('scroll-to-top');
-        const footer = document.querySelector('footer');
-        const sourcesNav = document.getElementById('sources-nav');
-        const y = window.scrollY;
-        if (!isCompact && y > 80) {
-            isCompact = true;
-            footer.classList.add('scrolled');
-            scrollToTopButton.classList.add('visible');
-            sourcesNav.classList.add('compact');
-        } else if (isCompact && y < 20) {
-            isCompact = false;
-            footer.classList.remove('scrolled');
-            scrollToTopButton.classList.remove('visible');
-            sourcesNav.classList.remove('compact');
-        }
-    });
-}
-
-// ===== Checkbox / source-label handlers (preserved tap/dblclick logic) =====
-
-function setupCheckboxHandlers() {
-    const labels = document.querySelectorAll('#buttons-container label');
-    labels.forEach(label => {
-        const checkbox = label.querySelector('input[type="checkbox"]');
-        if (!checkbox) return;
-
-        const sourceId = checkbox.id.replace('-checkbox', '');
-        const sourceName = checkbox.name;
-
-        const newLabel = label.cloneNode(true);
-        label.parentNode.replaceChild(newLabel, label);
-        const newCheckbox = newLabel.querySelector('input[type="checkbox"]');
-
-        let lastTapTime = 0;
-        let currentTouchStartX = 0;
-        let currentTouchStartY = 0;
-        let currentIsTouchMoved = false;
-        let tapTimer = null;
-        let isDoubleTapActioned = false;
-        let isDesktopDoubleClickDetected = false;
-
-        if ('ontouchstart' in window) {
-            newLabel.addEventListener('touchstart', (event) => {
-                currentIsTouchMoved = false;
-                currentTouchStartX = event.touches[0].clientX;
-                currentTouchStartY = event.touches[0].clientY;
-                const currentTime = Date.now();
-                const tapLength = currentTime - lastTapTime;
-                if (tapLength < doubleTapDelay && tapLength > 0) {
-                    event.preventDefault();
-                    clearTimeout(tapTimer);
-                    isDoubleTapActioned = true;
-                    newLabel.classList.add('highlight-selection');
-                    setTimeout(() => newLabel.classList.remove('highlight-selection'), 300);
-                    selectOnlyThisSource(sourceId, sourceName);
-                    lastTapTime = 0;
-                } else {
-                    lastTapTime = currentTime;
-                    isDoubleTapActioned = false;
-                }
-            });
-            newLabel.addEventListener('touchmove', (event) => {
-                const xDiff = Math.abs(event.touches[0].clientX - currentTouchStartX);
-                const yDiff = Math.abs(event.touches[0].clientY - currentTouchStartY);
-                if (xDiff > 10 || yDiff > 10) currentIsTouchMoved = true;
-            });
-            newLabel.addEventListener('touchend', () => {
-                if (currentIsTouchMoved) return;
-                clearTimeout(tapTimer);
-                if (isDoubleTapActioned) {
-                    isDoubleTapActioned = false;
-                } else {
-                    tapTimer = setTimeout(() => {
-                        newCheckbox.checked = !newCheckbox.checked;
-                        toggleSourceSelection(sourceId, sourceName);
-                    }, doubleTapDelay);
-                }
-            });
-            newCheckbox.addEventListener('click', (event) => event.preventDefault());
-        }
-
-        if (!('ontouchstart' in window) || window.navigator.maxTouchPoints === 0) {
-            newLabel.addEventListener('dblclick', (event) => {
-                event.preventDefault();
-                isDesktopDoubleClickDetected = true;
-                newLabel.classList.add('highlight-selection');
-                setTimeout(() => newLabel.classList.remove('highlight-selection'), 300);
-                selectOnlyThisSource(sourceId, sourceName);
-                setTimeout(() => { isDesktopDoubleClickDetected = false; }, 250);
-            });
-            newLabel.addEventListener('click', (event) => {
-                event.preventDefault();
-                setTimeout(() => {
-                    if (!isDesktopDoubleClickDetected) {
-                        newCheckbox.checked = !newCheckbox.checked;
-                        toggleSourceSelection(sourceId, sourceName);
-                    }
-                }, 200);
-            });
-        }
-    });
-}
-
-function selectOnlyThisSource(selectedEndpoint, selectedNewsType) {
-    // Abort any in-flight cycle — its source-state map is for the old
-    // selection and would otherwise keep the indicator stuck at the wrong
-    // count until those fetches settled.
-    if (currentAbortController) currentAbortController.abort();
-    const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
-    checkboxes.forEach(cb => cb.checked = false);
-    document.getElementById(`${selectedEndpoint}-checkbox`).checked = true;
-    newsData = {};
-    renderedItemKeys = new Set();
-    document.getElementById('news-container').replaceChildren();
-    // Route through fetchSelectedNews so the new cycle gets proper accounting.
-    // Single-flight handles the case where the prior cycle hasn't fully
-    // unwound yet (nextFetchScheduled = true → microtask follow-up).
+function toggleSourceSelection() {
+    persistPreferences();
+    updateSourceSummary();
+    currentAbortController?.abort();
+    displayNewsItems();
     fetchSelectedNews();
 }
-
-// ===== Toggle description (legacy entry kept for any external callers) =====
-
-function toggleDescription(index) {
-    const descriptionDiv = document.getElementById(`description-${index}`);
-    const listItem = descriptionDiv ? descriptionDiv.closest('.news-item-list') : null;
-    if (!descriptionDiv) return;
-    if (descriptionDiv.classList.contains('open')) {
-        descriptionDiv.classList.remove('open');
-        if (listItem) listItem.classList.remove('expanded');
-    } else {
-        descriptionDiv.classList.add('open');
-        if (listItem) listItem.classList.add('expanded');
-    }
-}
-
-// ===== Search handler & reload button binding =====
-
-function setupSearchHandler() {
-    const searchBar = document.getElementById('search-bar');
-    if (!searchBar) return;
-    searchBar.addEventListener('input', () => {
-        if (searchDebounceId) clearTimeout(searchDebounceId);
-        searchDebounceId = setTimeout(() => {
-            searchDebounceId = null;
-            applyFilter();
-        }, 150);
+function setupCheckboxHandlers() {
+    ENDPOINTS.forEach(source => {
+        const checkbox = document.getElementById(`${source}-checkbox`);
+        if (!checkbox) return;
+        // Native change events work identically with keyboard, mouse and touch.
+        checkbox.removeAttribute('onchange');
+        checkbox.addEventListener('change', toggleSourceSelection);
     });
 }
-
-function setupReloadButton() {
-    const reloadImg = document.querySelector('.reload-btn img');
-    if (reloadImg) reloadImg.addEventListener('click', reloadPage);
+function adjustFontSize(change) {
+    currentFontSize = Math.min(24, Math.max(14, currentFontSize + change));
+    applyFontSize();
+    persistPreferences();
 }
+function applyFontSize() {
+    document.documentElement.style.setProperty('--article-font-size', `${currentFontSize}px`);
+    const value = document.getElementById('font-size-value');
+    if (value) value.textContent = `${currentFontSize}px`;
+    const decrease = document.getElementById('decrease-font');
+    const increase = document.getElementById('increase-font');
+    if (decrease) decrease.disabled = currentFontSize <= 14;
+    if (increase) increase.disabled = currentFontSize >= 24;
+}
+function openReadingSettings() { document.getElementById('reading-settings')?.showModal(); }
+function closeReadingSettings() { document.getElementById('reading-settings')?.close(); }
 
-// ===== Lifecycle: visibility & BFCache =====
+function filterNews() { displayNewsItems(); }
+function applyFilter() { displayNewsItems(); }
+function clearSearch() {
+    const search = document.getElementById('search-bar');
+    if (!search) return;
+    search.value = '';
+    displayNewsItems();
+    search.focus();
+}
+function updateSearchClearVisibility() {
+    const clear = document.getElementById('search-clear');
+    const hasQuery = !!document.getElementById('search-bar')?.value;
+    if (clear) { clear.classList.toggle('visible', hasQuery); clear.hidden = !hasQuery; }
+}
+function updateNewsCount(query) {
+    const count = document.getElementById('news-count');
+    if (count) count.textContent = `${visibleItems.length} ${query ? 'result' : 'stor' + (visibleItems.length === 1 ? 'y' : 'ies')}${query && visibleItems.length !== 1 ? 's' : ''}`;
+}
+function renderStatusLine() {
+    const element = document.getElementById('last-updated');
+    const label = element?.querySelector('.status-label');
+    if (!label) return;
+    const states = [...cycleSourceStates.values()];
+    const settled = states.filter(state => ['loaded', 'failed'].includes(state)).length;
+    const retrying = states.includes('retrying');
+    element.classList.toggle('updating', states.length > 0);
+    element.classList.toggle('retrying', retrying);
+    element.classList.toggle('idle', states.length === 0);
+    label.textContent = states.length ? `Updating ${settled}/${states.length}${retrying ? ' · retrying' : ''}` : 'Choose your sources';
+}
+function finalizeStatusLine({ aborted }) {
+    const element = document.getElementById('last-updated');
+    const label = element?.querySelector('.status-label');
+    if (!label) return;
+    element.classList.remove('updating', 'retrying');
+    element.classList.add('idle');
+    const states = [...cycleSourceStates.values()];
+    if (!selectedSources().length) label.textContent = 'Choose your sources';
+    else if (states.length && states.every(state => state === 'failed')) label.textContent = 'Update unavailable';
+    else if (lastSuccessfulUpdate) label.textContent = `Updated ${lastSuccessfulUpdate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+    else label.textContent = aborted ? 'Update paused' : 'Your edition is ready';
+}
+function scrollToTop() { window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); }
+function scrollToSources() {
+    document.getElementById('sources-nav')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+}
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        if (autoRefreshTimerId) {
-            clearTimeout(autoRefreshTimerId);
-            autoRefreshTimerId = null;
-        }
-        if (currentAbortController) currentAbortController.abort();
-    } else if (isAutoRefreshEnabled) {
-        fetchSelectedNews();
-    }
+        clearTimeout(autoRefreshTimerId);
+        autoRefreshTimerId = null;
+        currentAbortController?.abort();
+    } else if (isAutoRefreshEnabled || (!lastSuccessfulUpdate && selectedSources().length)) fetchSelectedNews();
 });
-
-window.addEventListener('pageshow', (e) => {
-    if (!e.persisted) return;
-    const toggleButton = document.getElementById('auto-refresh-toggle');
-    isAutoRefreshEnabled = !!(toggleButton && toggleButton.classList.contains('auto-refresh-on'));
-    if (isAutoRefreshEnabled && !document.hidden) scheduleNextFetch();
+window.addEventListener('pageshow', event => {
+    if (event.persisted && isAutoRefreshEnabled && !document.hidden) fetchSelectedNews();
 });
-
-// ===== DOMContentLoaded =====
 
 document.addEventListener('DOMContentLoaded', () => {
-    const checkboxes = document.querySelectorAll('#buttons-container input[type="checkbox"]');
-    const uncheckedByDefault = ['bbc', 'nyt'];
-    checkboxes.forEach(cb => {
-        const endpoint = cb.id.replace('-checkbox', '');
-        cb.checked = !uncheckedByDefault.includes(endpoint);
+    const preferences = readStorage(STORAGE_KEY, {});
+    const sources = Array.isArray(preferences.sources) ? preferences.sources.filter(source => ENDPOINTS.includes(source)) : ENDPOINTS.filter(source => !['bbc', 'nyt'].includes(source));
+    ENDPOINTS.forEach(source => {
+        const checkbox = document.getElementById(`${source}-checkbox`);
+        if (checkbox) checkbox.checked = sources.includes(source);
     });
-
+    const storedArticles = readStorage(SAVED_KEY, []);
+    if (Array.isArray(storedArticles)) storedArticles.forEach(item => {
+        if (item && typeof item.title === 'string' && ENDPOINTS.includes(item.newsType)) savedArticles.set(getItemKey(item), item);
+    });
+    if (Number.isFinite(preferences.fontSize)) currentFontSize = Math.min(24, Math.max(14, preferences.fontSize));
+    if (['list', 'card'].includes(preferences.displayMode)) currentDisplayMode = preferences.displayMode;
+    isAutoRefreshEnabled = preferences.autoRefresh === true || new URLSearchParams(location.search).get('stream')?.toLowerCase() === 'true';
     setupCheckboxHandlers();
-    setupScrollHandler();
-    setupSearchHandler();
-    setupReloadButton();
-
-    document.getElementById('news-container').style.fontSize = `${currentFontSize}px`;
-
-    fetchSelectedNews();
-
-    const autoRefreshButton = document.getElementById('auto-refresh-toggle');
-    if (autoRefreshButton) {
-        autoRefreshButton.classList.add('auto-refresh-off');
-        autoRefreshButton.classList.remove('auto-refresh-on');
-        autoRefreshButton.title = 'Auto-refresh disabled - Click to enable';
-    }
-
-    // ?stream=true: enable auto-refresh + kiosk tweaks
-    try {
-        const params = new URLSearchParams(window.location.search);
-        if ((params.get('stream') || '').toLowerCase() === 'true') {
-            isAutoRefreshEnabled = true;
-            if (autoRefreshButton) {
-                autoRefreshButton.classList.remove('auto-refresh-off');
-                autoRefreshButton.classList.add('auto-refresh-on');
-                autoRefreshButton.title = 'Auto-refresh enabled (every 30s) - Click to disable';
-            }
-            startAutoRefresh();
-            try {
-                document.body.style.zoom = '95%';
-            } catch {
-                document.documentElement.style.transform = 'scale(0.95)';
-                document.documentElement.style.transformOrigin = 'top center';
-            }
-            setTimeout(() => { window.scrollBy(0, 195); }, 1050);
-        }
-    } catch (err) {
-        console.error('Error parsing URL parameters for stream mode:', err);
-    }
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
-            e.preventDefault();
-            document.getElementById('search-bar').focus();
-        }
-        if (e.key === 'Escape' && document.activeElement.id === 'search-bar') {
-            document.getElementById('search-bar').blur();
-        }
+    updateSourceSummary();
+    applyFontSize();
+    syncAutoRefreshButton();
+    setDisplayMode(currentDisplayMode);
+    const editionDate = document.getElementById('edition-date');
+    if (editionDate) editionDate.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    document.getElementById('search-bar')?.addEventListener('input', () => {
+        clearTimeout(searchDebounceId);
+        searchDebounceId = setTimeout(displayNewsItems, 150);
+        updateSearchClearVisibility();
     });
+    window.addEventListener('scroll', () => document.getElementById('scroll-to-top')?.classList.toggle('visible', window.scrollY > 400), { passive: true });
+    document.addEventListener('keydown', event => {
+        const editing = document.activeElement?.matches('input, textarea, [contenteditable="true"]');
+        if (event.key === '/' && !editing && !document.getElementById('reading-settings')?.open) {
+            event.preventDefault();
+            document.getElementById('search-bar')?.focus();
+        }
+        if (event.key === 'Escape' && document.activeElement?.id === 'search-bar') document.activeElement.blur();
+    });
+    fetchSelectedNews();
 });
