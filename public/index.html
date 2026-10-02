@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="Bring your favorite Israeli and international news sources together in one personal, readable feed.">
 <title>All News</title>
+<script src="theme.js"></script>
 <link rel="icon" href="news-mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="https://i.imgur.com/y6Zos1q.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,6 +73,7 @@
 <p id="reading-feedback" class="visually-hidden" role="status" aria-live="polite"></p>
 <dialog id="reading-settings" aria-labelledby="settings-title">
 <div class="dialog-heading"><h2 id="settings-title">Reading</h2><button class="icon-button" onclick="closeReadingSettings()" aria-label="Close reading settings"><svg><use href="#icon-close"/></svg></button></div>
+<div class="setting-row"><label for="theme-select">Appearance</label><select id="theme-select"><option value="system">Device theme</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
 <div class="setting-row"><h3>Text size</h3><div class="font-controls"><button id="decrease-font" onclick="adjustFontSize(-1)" aria-label="Decrease text size">A−</button><output id="font-size-value">18</output><button id="increase-font" onclick="adjustFontSize(1)" aria-label="Increase text size">A+</button></div></div>
 <div class="setting-row"><div><h3>Auto-refresh</h3><p>Every 30 seconds</p></div><button id="auto-refresh-toggle" class="auto-refresh-off" onclick="toggleAutoRefresh()" aria-pressed="false" aria-label="Automatic updates"><span class="toggle-track" aria-hidden="true"></span><span id="auto-refresh-label">Off</span></button></div>
 <p class="settings-note">Preferences are saved on this device.</p>
