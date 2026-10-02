@@ -276,11 +276,11 @@ function buildNewsItemNode(item) {
         on: { click: event => {
             const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
             event.currentTarget.setAttribute('aria-expanded', String(!expanded));
-            event.currentTarget.textContent = expanded ? 'Quick read +' : 'Close summary −';
+            event.currentTarget.textContent = expanded ? 'Summary +' : 'Close −';
             summary.hidden = expanded;
             summary.closest('article').classList.toggle('expanded', !expanded);
         } }
-    }, 'Quick read +') : null;
+    }, 'Summary +') : null;
     const article = el('article', {
         class: currentDisplayMode === 'list' ? 'news-item-list' : 'news-item',
         dataset: { itemKey: getItemKey(item), source, content: JSON.stringify([item.title, item.description, item.pubDate, item.link]) }
@@ -288,7 +288,7 @@ function buildNewsItemNode(item) {
     el('div', { class: 'story-meta' }, el('span', { class: 'source-badge' }, el('span', { class: `source-dot ${source}`, 'aria-hidden': 'true' }), SOURCE_NAMES[source] || 'News'), time),
     el('h2', { class: 'story-title', dir: detectLanguage(title), lang: detectLanguage(title) === 'rtl' ? 'he' : 'en' }, link ? el('a', anchorProps, title) : title),
     summary,
-    el('div', { class: 'story-actions' }, el('div', { class: 'story-links' }, summaryToggle, link ? el('a', { ...anchorProps, class: 'read-original-link', 'aria-label': `Read original: ${title}` }, 'Full story ↗') : null), save));
+    el('div', { class: 'story-actions' }, el('div', { class: 'story-links' }, summaryToggle, link ? el('a', { ...anchorProps, class: 'read-original-link', 'aria-label': `Read original: ${title}` }, 'Read ↗') : null), save));
     return article;
 }
 
@@ -300,18 +300,18 @@ function buildEmptyState(query) {
         title = 'No stories found'; hint = `No ${currentFeedView === 'saved' ? 'saved ' : ''}stories match “${query}”. Try another word or a source name.`;
         action = el('button', { type: 'button', on: { click: clearSearch } }, 'Clear search');
     } else if (currentFeedView === 'saved') {
-        title = 'Your next good read, saved.'; hint = 'Tap the bookmark on any story to keep it here for later.';
+        title = 'Nothing saved yet'; hint = 'Bookmark a story to save it here.';
         action = el('button', { type: 'button', on: { click: () => setFeedView('all') } }, 'Explore the latest');
     } else if (!hasSources) {
-        title = 'Make this your edition'; hint = 'Choose a few sources above to bring your news together.';
+        title = 'Choose your sources'; hint = 'Select a source to see its stories.';
         action = el('button', { type: 'button', on: { click: scrollToSources } }, 'Choose sources');
     } else if (isFetching) {
-        title = 'Putting your edition together'; hint = 'The latest stories will appear as each source arrives.';
+        title = 'Loading news…'; hint = 'Fetching your selected sources.';
     } else if (allFailed) {
-        title = 'We couldn’t load your edition'; hint = 'Check your connection, then try again. Your saved stories are still here.';
+        title = 'News unavailable'; hint = 'Check your connection and try again.';
         action = el('button', { type: 'button', on: { click: refreshNews } }, 'Try again');
     } else {
-        title = 'A quiet moment'; hint = 'These sources have no stories to show right now. Refresh or choose another source.';
+        title = 'No stories yet'; hint = 'Refresh or choose another source.';
         action = el('button', { type: 'button', on: { click: refreshNews } }, 'Refresh stories');
     }
     return el('div', { class: 'empty-state', role: 'status' }, el('span', { class: 'empty-state-icon', 'aria-hidden': 'true' }, '✳'), el('h2', { class: 'empty-state-text' }, title), el('p', { class: 'empty-state-hint' }, hint), action);
@@ -500,8 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
     applyFontSize();
     syncAutoRefreshButton();
     setDisplayMode(currentDisplayMode);
-    const editionDate = document.getElementById('edition-date');
-    if (editionDate) editionDate.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('search-bar')?.addEventListener('input', () => {
         clearTimeout(searchDebounceId);
         searchDebounceId = setTimeout(displayNewsItems, 150);
