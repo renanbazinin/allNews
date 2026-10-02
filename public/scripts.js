@@ -397,13 +397,44 @@ function toggleSourceSelection() {
     displayNewsItems();
     fetchSelectedNews();
 }
+function selectOnlySource(source) {
+    ENDPOINTS.forEach(name => {
+        const checkbox = document.getElementById(`${name}-checkbox`);
+        if (checkbox) checkbox.checked = name === source;
+    });
+    toggleSourceSelection();
+    const feedback = document.getElementById('reading-feedback');
+    if (feedback) feedback.textContent = `Only ${SOURCE_NAMES[source]} selected.`;
+}
 function setupCheckboxHandlers() {
+    let lastTap = null;
     ENDPOINTS.forEach(source => {
         const checkbox = document.getElementById(`${source}-checkbox`);
         if (!checkbox) return;
-        // Native change events work identically with keyboard, mouse and touch.
+        let selectExclusively = false;
+        checkbox.title = `Double-click or double-tap for only ${SOURCE_NAMES[source]}. Keyboard: Alt+Enter.`;
         checkbox.removeAttribute('onchange');
-        checkbox.addEventListener('change', toggleSourceSelection);
+        checkbox.addEventListener('click', event => {
+            // Touch browsers need a timed pair; desktop click detail also respects
+            // the user's OS double-click speed. Keyboard activation stays a toggle.
+            const pointer = event.detail > 0 || ['touch', 'pen'].includes(event.pointerType);
+            selectExclusively = pointer && (event.detail === 2 ||
+                (lastTap?.source === source && event.timeStamp - lastTap.time <= 350));
+            lastTap = pointer && !selectExclusively ? { source, time: event.timeStamp } : null;
+        });
+        checkbox.addEventListener('change', () => {
+            // Wait for the native toggle before applying the exclusive selection.
+            if (selectExclusively) selectOnlySource(source);
+            else toggleSourceSelection();
+            selectExclusively = false;
+        });
+        checkbox.addEventListener('keydown', event => {
+            if (event.altKey && event.key === 'Enter') {
+                event.preventDefault();
+                lastTap = null;
+                selectOnlySource(source);
+            }
+        });
     });
 }
 function adjustFontSize(change) {
