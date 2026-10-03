@@ -84,10 +84,9 @@ build script does this automatically.
 - Privacy: https://renanbazinin.github.io/allNews/public/privacy.html
 - Contact: https://renanbazinin.github.io/allNews/public/contact.html
 
-GitHub Pages publishes `docs/public-policy`, based on the existing `main` site
-with only legal/contact pages and their assets added. The mobile redesign stays
-unmerged on `design/mobile-newsroom`. When changing the policy, update the
-generated page and copy the changed public legal assets to the Pages branch too.
+GitHub Pages publishes the repository root from `main`, including the mobile
+redesign and these public pages. When changing the policy, regenerate the HTML
+and commit both files to `main`; the Android bundle packages the same pages.
 
 ## References
 
