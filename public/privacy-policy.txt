@@ -1,0 +1,81 @@
+ALL NEWS (כל החדשות) - PRIVACY POLICY
+Effective date: 3 October 2026
+
+App: All News / כל החדשות
+Android package: com.rssallnews.allnews
+Developer: Renan Bazinin (renanbaz)
+Privacy and support contact: renanbazinin2@gmail.com
+
+All News is a news aggregator. It displays headlines, summaries and links from
+third-party publishers. This policy covers the All News app and web interface.
+
+1. Information stored on your device
+
+All News does not require an account. Your selected news sources, reading
+preferences (including text size, layout, automatic refresh and appearance),
+and saved stories are stored in your browser or Android WebView local storage.
+Saved stories include their headline, available summary, publisher, article
+link, publication date and save time. They are not uploaded by All News to a
+user account or synchronized through our news service. Search text is used
+locally to filter the feed and is not sent to our news service.
+
+Android's system backup or device-transfer features may include app data,
+depending on your device and backup settings. These features are operated by
+your device/backup provider, rather than an All News account service.
+
+2. Network requests and service providers
+
+To load and refresh news, the app contacts our news service hosted on Google
+Cloud Run. The requested feed identifies the selected publisher. Network
+services necessarily receive technical information such as your IP address,
+request time, requested URL and browser/app request headers. Hosting providers
+may record request and error logs for service operation, security and diagnosis.
+All News does not send your saved-story list or search text with these requests.
+
+The web interface uses Google Fonts and may request its web icon from Imgur.
+Opening the public website or policy through GitHub also sends a request to
+GitHub's hosting service. These providers may process connection information
+under their own privacy policies:
+Google: https://policies.google.com/privacy
+GitHub: https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement
+Imgur: https://imgur.com/privacy
+
+The app has no advertising, behavioral analytics or user-account SDKs. It does
+not request access to your location, contacts, camera, microphone or phone files.
+We do not sell personal information or use your saved stories for advertising.
+
+3. Publisher links
+
+When you open an original article, you visit the publisher's website in your
+browser. That publisher controls its own cookies, subscriptions, advertising
+and data collection. Its privacy policy applies to that visit. All News does
+not control those websites or download full articles for offline reading.
+
+4. Contacting us
+
+If you email us, we receive your email address, message and any information
+you choose to include. We use it to respond to support requests, handle privacy
+questions and resolve reported problems. Avoid sending passwords or other
+sensitive information. Your email provider also processes that communication.
+
+5. Retention and deletion
+
+Local preferences and saved stories remain until you remove them or clear the
+app/site data. Remove a saved story with its bookmark button. To remove all
+local data, clear this website's storage in your browser or use Android
+Settings > Apps > All News > Storage > Clear storage. Backup copies are
+controlled through your device/backup provider's settings. There is no All News
+account to delete.
+
+Support correspondence is kept as needed to resolve the request and any
+related follow-up or applicable legal obligation. Technical log retention is
+governed by the hosting service's configuration and applicable provider terms.
+For questions about information held by us, or to request access, correction
+or deletion of support correspondence, email renanbazinin2@gmail.com.
+
+6. Security and changes
+
+The app uses HTTPS for its news service. Local storage relies on your browser
+and device protections; no storage or transmission method is completely secure.
+We may update this policy as the app changes and will update the effective
+date above. Contact renanbazinin2@gmail.com with any privacy questions.
