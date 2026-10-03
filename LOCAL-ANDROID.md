@@ -66,8 +66,8 @@ npm run android:bundle
 ```
 
 Release builds stop with a configuration message if the signing file is absent or
-incomplete. This release is `1.1.36` (code `36`), above the highest existing Play
-bundle (code `35`) checked on 3 October 2026. Increase the version code for each
+incomplete. This release is `1.1.37` (code `37`), following the internal testing
+release `1.1.36` published on 3 October 2026. Increase the version code for each
 future Play upload. Local builds do not upload or publish anything.
 
 The WebView applies Android 16 system-bar, cutout and keyboard insets so controls
