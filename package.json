@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "node index.js",
+    "android:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1 assembleDebug",
+    "android:bundle": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1 bundleRelease"
+  },
   "dependencies": {
     "axios": "^1.7.2",
     "cors": "^2.8.5",

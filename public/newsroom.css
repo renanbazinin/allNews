@@ -194,6 +194,8 @@ body:has(dialog[open]) { overflow: hidden; }
 .contact-email { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-size: 16px; overflow-wrap: anywhere; }
 .contact-page .contact-developer { color: var(--muted); font-size: 12px; }
 .contact-page section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 24px; }
+.policy-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.75; margin: 24px 0; }
+.contact-privacy + .contact-privacy { margin-left: 20px; }
 .primary-button { width: 100%; border: 0; border-radius: 6px; color: var(--on-ink); background: var(--ink); padding: 14px 20px; margin-top: 14px; text-align: left; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { to { opacity: .4; } }
