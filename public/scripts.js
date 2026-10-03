@@ -3,15 +3,12 @@ const API_BASE = 'https://allnews-server-1018085155010.europe-west3.run.app';
 const ENDPOINTS = ['bbc', 'nyt', 'ynet', 'maariv', 'n12', 'rotter', 'walla', 'haaretz'];
 const SOURCE_NAMES = { bbc: 'BBC', nyt: 'The New York Times', ynet: 'Ynet', maariv: 'Maariv', n12: 'N12', rotter: 'Rotter', walla: 'Walla', haaretz: 'Haaretz' };
 const STORAGE_KEY = 'allnews.reading.v1';
-const SAVED_KEY = 'allnews.saved.v1';
 const autoRefreshInterval = 30000;
 
 let currentDisplayMode = 'list';
-let currentFeedView = 'all';
 let currentFontSize = 18;
 let lastSuccessfulUpdate = null;
 let newsData = {};
-let savedArticles = new Map();
 let visibleItems = [];
 let isAutoRefreshEnabled = false;
 let isFetching = false;
@@ -212,52 +209,6 @@ function clearFetchErrors() {
     if (container) { container.classList.remove('has-errors'); container.replaceChildren(); }
 }
 
-function bookmarkIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '18');
-    svg.setAttribute('height', '18');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.7');
-    svg.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4Z');
-    path.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(path);
-    return svg;
-}
-function syncSaveButton(button, item) {
-    const saved = savedArticles.has(getItemKey(item));
-    button.classList.toggle('is-saved', saved);
-    button.setAttribute('aria-pressed', String(saved));
-    button.setAttribute('aria-label', saved ? 'Remove saved article' : 'Save article');
-    button.title = saved ? 'Remove from saved stories' : 'Save for later';
-    const label = button.querySelector('.save-label');
-    if (label) label.textContent = saved ? 'Saved' : 'Save';
-}
-function toggleSavedArticle(item) {
-    const key = getItemKey(item);
-    const removingFocusedSavedItem = currentFeedView === 'saved' && savedArticles.has(key) && document.activeElement?.closest('article')?.dataset.itemKey === key;
-    const focusedIndex = visibleItems.findIndex(story => getItemKey(story) === key);
-    if (savedArticles.has(key)) savedArticles.delete(key);
-    else savedArticles.set(key, {
-        title: item.title, description: typeof item.description === 'string' ? item.description : '',
-        pubDate: item.pubDate || '', link: safeHttpUrl(item.link) || '', newsType: item.newsType,
-        savedAt: Date.now()
-    });
-    const stored = writeStorage(SAVED_KEY, [...savedArticles.values()]);
-    const feedback = document.getElementById('reading-feedback');
-    if (feedback) feedback.textContent = stored ? (savedArticles.has(key) ? 'Article saved for later.' : 'Article removed from saved.') : 'Saved for this session. Your browser could not store this on your device.';
-    displayNewsItems();
-    syncFeedNavigation();
-    if (removingFocusedSavedItem) {
-        const buttons = document.querySelectorAll('#news-container .save-story');
-        const target = buttons[Math.min(focusedIndex, buttons.length - 1)] || document.querySelector('#news-container .empty-state button');
-        target?.focus({ preventScroll: true });
-    }
-}
-
 function buildNewsItemNode(item) {
     const title = htmlToText(item.title) || 'Untitled story';
     const description = htmlToText(item.description);
@@ -268,8 +219,6 @@ function buildNewsItemNode(item) {
     const descriptionId = `story-summary-${++descriptionSequence}`;
     const anchorProps = link ? { href: link, target: '_blank', rel: 'noopener noreferrer' } : {};
     const time = el('time', { class: 'story-time', datetime: validDate ? date.toISOString() : null, title: validDate ? date.toLocaleString() : null }, getRelativeTime(date));
-    const save = el('button', { class: 'save-story', type: 'button', on: { click: () => toggleSavedArticle(item) } }, bookmarkIcon(), el('span', { class: 'save-label' }, 'Save'));
-    syncSaveButton(save, item);
     const summary = description && description !== title ? el('div', { class: 'story-description', id: descriptionId, hidden: '' }, el('p', { dir: detectLanguage(description), lang: detectLanguage(description) === 'rtl' ? 'he' : 'en' }, description)) : null;
     const summaryToggle = summary ? el('button', {
         type: 'button', class: 'summary-toggle', 'aria-expanded': 'false', 'aria-controls': descriptionId,
@@ -288,7 +237,7 @@ function buildNewsItemNode(item) {
     el('div', { class: 'story-meta' }, el('span', { class: 'source-badge' }, el('span', { class: `source-dot ${source}`, 'aria-hidden': 'true' }), SOURCE_NAMES[source] || 'News'), time),
     el('h2', { class: 'story-title', dir: detectLanguage(title), lang: detectLanguage(title) === 'rtl' ? 'he' : 'en' }, link ? el('a', anchorProps, title) : title),
     summary,
-    el('div', { class: 'story-actions' }, el('div', { class: 'story-links' }, summaryToggle, link ? el('a', { ...anchorProps, class: 'read-original-link', 'aria-label': `Read original: ${title}` }, 'Read ↗') : null), save));
+    el('div', { class: 'story-actions' }, el('div', { class: 'story-links' }, summaryToggle, link ? el('a', { ...anchorProps, class: 'read-original-link', 'aria-label': `Read original: ${title}` }, 'Read ↗') : null)));
     return article;
 }
 
@@ -297,11 +246,8 @@ function buildEmptyState(query) {
     const allFailed = cycleSourceStates.size > 0 && [...cycleSourceStates.values()].every(state => state === 'failed');
     let title, hint, action;
     if (query) {
-        title = 'No stories found'; hint = `No ${currentFeedView === 'saved' ? 'saved ' : ''}stories match “${query}”. Try another word or a source name.`;
+        title = 'No stories found'; hint = `No stories match “${query}”. Try another word or a source name.`;
         action = el('button', { type: 'button', on: { click: clearSearch } }, 'Clear search');
-    } else if (currentFeedView === 'saved') {
-        title = 'Nothing saved yet'; hint = 'Bookmark a story to save it here.';
-        action = el('button', { type: 'button', on: { click: () => setFeedView('all') } }, 'Explore the latest');
     } else if (!hasSources) {
         title = 'Choose your sources'; hint = 'Select a source to see its stories.';
         action = el('button', { type: 'button', on: { click: scrollToSources } }, 'Choose sources');
@@ -318,7 +264,7 @@ function buildEmptyState(query) {
 }
 
 function getFeedItems() {
-    const items = currentFeedView === 'saved' ? [...savedArticles.values()] : selectedSources().flatMap(source => newsData[source] || []);
+    const items = selectedSources().flatMap(source => newsData[source] || []);
     const deduplicated = [...new Map(items.map(item => [getItemKey(item), item])).values()];
     return deduplicated.sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0));
 }
@@ -330,7 +276,7 @@ function displayNewsItems() {
     visibleItems = getFeedItems().filter(item => !normalized || `${htmlToText(item.title)} ${htmlToText(item.description)} ${SOURCE_NAMES[item.newsType] || ''}`.toLocaleLowerCase().includes(normalized));
     container.classList.toggle('card-view', currentDisplayMode === 'card');
     container.classList.toggle('list-view', currentDisplayMode === 'list');
-    container.setAttribute('aria-busy', String(isFetching && currentFeedView === 'all'));
+    container.setAttribute('aria-busy', String(isFetching));
     const existing = new Map([...container.querySelectorAll('article[data-item-key]')].map(node => [node.dataset.itemKey, node]));
     container.querySelectorAll('.empty-state').forEach(node => node.remove());
     const keys = new Set(visibleItems.map(getItemKey));
@@ -344,7 +290,6 @@ function displayNewsItems() {
         if (!node) node = buildNewsItemNode(item);
         node.classList.toggle('news-item-list', currentDisplayMode === 'list');
         node.classList.toggle('news-item', currentDisplayMode === 'card');
-        syncSaveButton(node.querySelector('.save-story'), item);
         const target = previous ? previous.nextSibling : container.firstChild;
         if (node !== target) container.insertBefore(node, target);
         previous = node;
@@ -352,26 +297,6 @@ function displayNewsItems() {
     if (!visibleItems.length) container.appendChild(buildEmptyState(query));
     updateNewsCount(query);
     updateSearchClearVisibility();
-    syncFeedNavigation();
-}
-
-function syncFeedNavigation() {
-    updateSourceSummary();
-    document.querySelectorAll('[data-feed-view]').forEach(button => {
-        const active = button.dataset.feedView === currentFeedView;
-        button.classList.toggle('active', active);
-        if (button.getAttribute('role') === 'tab') button.setAttribute('aria-selected', String(active));
-        else button.setAttribute('aria-pressed', String(active));
-    });
-    const count = document.getElementById('saved-count');
-    if (count) count.textContent = String(savedArticles.size);
-    const heading = document.getElementById('feed-title');
-    if (heading) heading.textContent = currentFeedView === 'saved' ? 'Saved for later' : 'The latest';
-}
-function setFeedView(view) {
-    if (!['all', 'saved'].includes(view)) return;
-    currentFeedView = view;
-    displayNewsItems();
 }
 function setDisplayMode(mode) {
     if (!['list', 'card'].includes(mode)) return;
@@ -388,7 +313,7 @@ function updateSourceSummary() {
     const number = document.getElementById('source-selection-count');
     if (number) number.textContent = `${count} selected`;
     const summary = document.getElementById('source-summary');
-    if (summary) summary.textContent = currentFeedView === 'saved' ? 'On this device' : `${count} selected source${count === 1 ? '' : 's'}`;
+    if (summary) summary.textContent = `${count} selected source${count === 1 ? '' : 's'}`;
 }
 function toggleSourceSelection() {
     persistPreferences();
@@ -451,8 +376,8 @@ function applyFontSize() {
     if (decrease) decrease.disabled = currentFontSize <= 14;
     if (increase) increase.disabled = currentFontSize >= 24;
 }
-function openReadingSettings() { document.getElementById('reading-settings')?.showModal(); }
-function closeReadingSettings() { document.getElementById('reading-settings')?.close(); }
+function openSettings() { document.getElementById('reading-settings')?.showModal(); }
+function closeSettings() { document.getElementById('reading-settings')?.close(); }
 
 function filterNews() { displayNewsItems(); }
 function applyFilter() { displayNewsItems(); }
@@ -518,10 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ENDPOINTS.forEach(source => {
         const checkbox = document.getElementById(`${source}-checkbox`);
         if (checkbox) checkbox.checked = sources.includes(source);
-    });
-    const storedArticles = readStorage(SAVED_KEY, []);
-    if (Array.isArray(storedArticles)) storedArticles.forEach(item => {
-        if (item && typeof item.title === 'string' && ENDPOINTS.includes(item.newsType)) savedArticles.set(getItemKey(item), item);
     });
     if (Number.isFinite(preferences.fontSize)) currentFontSize = Math.min(24, Math.max(14, preferences.fontSize));
     if (['list', 'card'].includes(preferences.displayMode)) currentDisplayMode = preferences.displayMode;

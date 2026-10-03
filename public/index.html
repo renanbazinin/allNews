@@ -20,7 +20,6 @@
 <body>
 <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
-<symbol id="icon-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></symbol>
 <symbol id="icon-feed" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></symbol>
 <symbol id="icon-sources" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
 <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
@@ -32,7 +31,7 @@
 <a class="skip-link" href="#feed">Skip to headlines</a>
 <header class="masthead"><div class="masthead-inner">
 <a class="brand" href="./" aria-label="All News home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>all<span class="brand-serif">news</span><span class="brand-period">.</span></span></a>
-<button class="icon-button desktop-settings" onclick="openReadingSettings()" aria-label="Reading settings" title="Reading settings"><svg><use href="#icon-settings"/></svg></button>
+<button class="icon-button desktop-settings" onclick="openSettings()" aria-label="Settings" title="Settings"><svg><use href="#icon-settings"/></svg></button>
 </div></header>
 <main class="page-shell">
 <section id="sources-nav" class="source-section" aria-labelledby="sources-title" tabindex="-1">
@@ -49,9 +48,8 @@
 </div></section>
 <section id="feed" class="feed-section" aria-label="News feed" tabindex="-1">
 <h1 id="feed-title" class="visually-hidden">The latest</h1>
-<div class="feed-toolbar"><div class="feed-tabs" role="group" aria-label="Choose feed">
-<button class="feed-tab active" data-feed-view="all" aria-pressed="true" onclick="setFeedView('all')">Latest</button>
-<button class="feed-tab" data-feed-view="saved" aria-pressed="false" onclick="setFeedView('saved')">Saved <span id="saved-count" class="saved-count">0</span></button>
+<div class="feed-toolbar"><div class="feed-tabs">
+<span class="feed-tab active">Latest</span>
 </div><div class="search-field" id="search-container"><svg aria-hidden="true"><use href="#icon-search"/></svg><input type="search" id="search-bar" aria-label="Search headlines" placeholder="Search" autocomplete="off"><button id="search-clear" onclick="clearSearch()" aria-label="Clear search"><svg><use href="#icon-close"/></svg></button><kbd aria-hidden="true">/</kbd></div>
 <div class="feed-actions"><div id="mode-switcher" class="segmented-control" role="group" aria-label="Article layout">
 <button id="list-mode-btn" class="active" onclick="setDisplayMode('list')" aria-label="List view" aria-pressed="true" title="List view"><svg><use href="#icon-list"/></svg></button>
@@ -64,21 +62,19 @@
 </section></main>
 <footer class="site-footer"><a href="contact.html">Contact us</a><span aria-hidden="true"> · </span><a href="privacy.html">Privacy policy</a></footer>
 <nav class="mobile-dock" aria-label="Quick navigation">
-<button class="active" data-feed-view="all" aria-pressed="true" onclick="setFeedView('all'); document.getElementById('feed').scrollIntoView()"><svg><use href="#icon-feed"/></svg><span>Latest</span></button>
-<button data-feed-view="saved" aria-pressed="false" onclick="setFeedView('saved'); document.getElementById('feed').scrollIntoView()"><svg><use href="#icon-bookmark"/></svg><span>Saved</span></button>
-<button onclick="scrollToSources()"><svg><use href="#icon-sources"/></svg><span>Sources</span></button>
-<button onclick="openReadingSettings()"><svg><use href="#icon-settings"/></svg><span>Reading</span></button>
+<button class="active" aria-current="page" onclick="document.getElementById('feed').scrollIntoView()"><svg><use href="#icon-feed"/></svg><span>Latest</span></button>
+<button onclick="openSettings()"><svg><use href="#icon-settings"/></svg><span>Settings</span></button>
 </nav>
 <button id="scroll-to-top" class="icon-button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
 <p id="reading-feedback" class="visually-hidden" role="status" aria-live="polite"></p>
 <dialog id="reading-settings" aria-labelledby="settings-title">
-<div class="dialog-heading"><h2 id="settings-title">Reading</h2><button class="icon-button" onclick="closeReadingSettings()" aria-label="Close reading settings"><svg><use href="#icon-close"/></svg></button></div>
+<div class="dialog-heading"><h2 id="settings-title">Settings</h2><button class="icon-button" onclick="closeSettings()" aria-label="Close settings"><svg><use href="#icon-close"/></svg></button></div>
 <div class="setting-row"><label for="theme-select">Appearance</label><select id="theme-select"><option value="system">Device theme</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
 <div class="setting-row"><h3>Text size</h3><div class="font-controls"><button id="decrease-font" onclick="adjustFontSize(-1)" aria-label="Decrease text size">A−</button><output id="font-size-value">18</output><button id="increase-font" onclick="adjustFontSize(1)" aria-label="Increase text size">A+</button></div></div>
 <div class="setting-row"><div><h3>Auto-refresh</h3><p>Every 30 seconds</p></div><button id="auto-refresh-toggle" class="auto-refresh-off" onclick="toggleAutoRefresh()" aria-pressed="false" aria-label="Automatic updates"><span class="toggle-track" aria-hidden="true"></span><span id="auto-refresh-label">Off</span></button></div>
 <p class="settings-note">Preferences are saved on this device.</p>
 <nav class="settings-links" aria-label="App information"><a href="contact.html">Contact us</a><a href="privacy.html">Privacy policy</a></nav>
-<button class="primary-button" onclick="closeReadingSettings()">Done</button>
+<button class="primary-button" onclick="closeSettings()">Done</button>
 </dialog>
 <script src="scripts.js"></script>
 </body>

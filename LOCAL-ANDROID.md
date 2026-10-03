@@ -73,7 +73,7 @@ future Play upload. Local builds do not upload or publish anything.
 The WebView applies Android 16 system-bar, cutout and keyboard insets so controls
 remain accessible. Android's Back action returns from bundled Contact/Privacy
 pages to the feed. Android backup remains enabled for app data, including local
-reading preferences and saved-story metadata.
+reading preferences and any saved-story metadata retained from older versions.
 
 ## Public policy pages
 
