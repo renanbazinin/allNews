@@ -182,6 +182,18 @@ body:has(dialog[open]) { overflow: hidden; }
 .toggle-track::after { content: ''; display: block; width: 17px; height: 17px; background: white; border-radius: 50%; transition: transform .2s; }
 .auto-refresh-on .toggle-track { background: var(--accent); }.auto-refresh-on .toggle-track::after { transform: translateX(17px); }
 .settings-note { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+.settings-links { display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 12px; color: var(--muted); }
+.settings-links a { display: inline-flex; align-items: center; min-height: 44px; text-underline-offset: 3px; }
+.contact-page { width: min(600px, 100%); margin: 0 auto; padding: 32px 24px calc(40px + env(safe-area-inset-bottom)); }
+.contact-back, .contact-privacy { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; text-underline-offset: 4px; }
+.contact-back { color: var(--muted); text-decoration: none; }
+.contact-page h1 { font-size: 28px; margin: 28px 0 8px; letter-spacing: -.03em; }
+.contact-page h2 { font-size: 16px; margin: 0 0 10px; }
+.contact-page p { font-size: 14px; line-height: 1.7; }
+.contact-page .contact-intro { color: var(--muted); margin-top: 0; }
+.contact-email { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-size: 16px; overflow-wrap: anywhere; }
+.contact-page .contact-developer { color: var(--muted); font-size: 12px; }
+.contact-page section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 24px; }
 .primary-button { width: 100%; border: 0; border-radius: 6px; color: var(--on-ink); background: var(--ink); padding: 14px 20px; margin-top: 14px; text-align: left; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { to { opacity: .4; } }
